@@ -1,0 +1,175 @@
+This is old code that we are not currently using, but might come back to.
+
+Autonomous
+
+final double RAMP_UP_P = 0.27;
+    final double RAMP_DOWN_P = 0.0033;
+    final double WHEEL_ADJUSTMENT_P = 0.03;
+    final double GYRO_RAMP_UP_P = 0.27;
+    final double GYRO_RAMP_DOWN_P = 0.00001;
+    final double MINIMUM_WHEEL_SPEED_RAMPING_UP = 0.17;
+    final double MINIMUM_WHEEL_SPEED_RAMPING_DOWN = 0.05;
+    final int DIFFERENCE_IN_WHEEL_ENCODERS_THRESHOLD = 50;
+    final double MAXIMUM_WHEEL_ADJUSTMENT = 0.25;
+    final double MINIMUM_WHEEL_ADJUSTMENT = 0.0;
+    final int VALUE_TO_START_RAMPING_DOWN = 300;
+
+    void encoderDrive(int ticksToGo, int direction)
+    {
+        boolean rampUp = true;
+        double wheelSpeed;
+        double wheelAdjustment;
+        int startingRightPosition = RW.getCurrentPosition();
+        int startingLeftPosition = LW.getCurrentPosition();
+        double differenceInRightEncoders = Math.abs(RW.getCurrentPosition() - startingRightPosition);
+        double differenceInLeftEncoders = Math.abs(LW.getCurrentPosition() - startingLeftPosition);
+        while(Math.abs(RW.getCurrentPosition() - startingRightPosition) < ticksToGo)
+        {
+            if(rampUp)
+            {
+                wheelSpeed = ((differenceInRightEncoders) * RAMP_UP_P) + MINIMUM_WHEEL_SPEED_RAMPING_UP;
+                if(wheelSpeed >= MAXIMUM_MOTOR_SPEED || Math.abs(differenceInRightEncoders) > (ticksToGo / 2))
+                {
+                    rampUp = false;
+                }
+            }
+            else
+            {
+                if((ticksToGo - differenceInRightEncoders) < VALUE_TO_START_RAMPING_DOWN)
+                {
+                    wheelSpeed = (ticksToGo - differenceInRightEncoders) * RAMP_DOWN_P;
+                }
+                else
+                {
+                    wheelSpeed = MAXIMUM_MOTOR_SPEED;
+                }
+            }
+            wheelAdjustment = Math.abs(differenceInLeftEncoders - differenceInRightEncoders);
+            if(wheelAdjustment > DIFFERENCE_IN_WHEEL_ENCODERS_THRESHOLD)
+            {
+                wheelAdjustment *= WHEEL_ADJUSTMENT_P;
+            }
+            else
+            {
+                wheelAdjustment = MINIMUM_WHEEL_ADJUSTMENT;
+            }
+
+            wheelAdjustment = Range.clip(wheelAdjustment, MINIMUM_WHEEL_ADJUSTMENT, MAXIMUM_WHEEL_ADJUSTMENT);
+
+            wheelSpeed = Range.clip(wheelSpeed, MINIMUM_MOTOR_SPEED, MAXIMUM_MOTOR_SPEED);
+
+            if(wheelAdjustment == 0)
+            {
+                rightWheelSpeed = (wheelSpeed * direction);
+                leftWheelSpeed = (wheelSpeed * direction);
+            }
+            else if(differenceInRightEncoders > differenceInLeftEncoders)
+            {
+                rightWheelSpeed = ((wheelSpeed * (0.9)) * direction);
+                leftWheelSpeed = (wheelSpeed * direction);
+            }
+            else
+            {
+                rightWheelSpeed = (wheelSpeed * direction);
+                leftWheelSpeed = ((wheelSpeed * (0.9)) * direction);
+            }
+            differenceInRightEncoders = Math.abs(RW.getCurrentPosition() - startingRightPosition);
+            differenceInLeftEncoders = Math.abs(LW.getCurrentPosition() - startingLeftPosition);
+        }
+        rightWheelSpeed = 0.0;
+        leftWheelSpeed = 0.0;
+        doDaSleep(50);
+        differenceInRightEncoders = Math.abs(RW.getCurrentPosition() - startingRightPosition);
+        encoderDrives(0.1, ((int)differenceInRightEncoders - ticksToGo), (direction * -1));
+    }
+
+
+    final int GYRO_OK_THRESHOLD = 5;
+    final int GYRO_VALUE_TO_START_RAMPING_DOWN = 75;
+
+    void turnGyro(int targetPosition)
+    {
+        boolean rampUp = true;
+        double wheelSpeed;
+        int starting = gyro.getIntegratedZValue();
+        int currentGyro = starting;
+        int difference = Math.abs(starting - gyro.getIntegratedZValue());
+        while(currentGyro < (targetPosition - GYRO_OK_THRESHOLD) ||
+                currentGyro > (targetPosition + GYRO_OK_THRESHOLD))
+        {
+            if(rampUp)
+            {
+                wheelSpeed = MINIMUM_WHEEL_SPEED_RAMPING_UP + (difference * GYRO_RAMP_UP_P);
+                if(wheelSpeed > MAXIMUM_MOTOR_SPEED ||
+                        (Math.abs(starting - targetPosition) / 2) < (difference))
+                {
+                    rampUp = false;
+                }
+            }
+            else
+            {
+                if(Math.abs(targetPosition - currentGyro) < GYRO_VALUE_TO_START_RAMPING_DOWN)
+                {
+                    wheelSpeed = Math.abs(targetPosition - currentGyro) * GYRO_RAMP_DOWN_P;
+                    wheelSpeed = Range.clip(wheelSpeed, 0.1, 1.0);
+                }
+                else
+                {
+                    wheelSpeed = MAXIMUM_MOTOR_SPEED;
+                }
+            }
+
+            if(currentGyro < targetPosition)
+            {
+                rightWheelSpeed = wheelSpeed;
+                leftWheelSpeed = -wheelSpeed;
+            }
+            else
+            {
+                rightWheelSpeed = -wheelSpeed;
+                leftWheelSpeed = wheelSpeed;
+            }
+
+            currentGyro = gyro.getIntegratedZValue();
+            difference = Math.abs(starting - currentGyro);
+        }
+    }
+
+
+    while((Math.abs(RW.getCurrentPosition() - starting) < (ticksToGo - DRIVE_THRESHOLD))
+                    || (Math.abs(RW.getCurrentPosition() - starting) > (ticksToGo + DRIVE_THRESHOLD)))
+            {
+                startValue = starting;
+                if((Math.abs(RW.getCurrentPosition() - starting) < (ticksToGo - DRIVE_THRESHOLD)))
+                {
+                    step = 8;
+                    leftWheelSpeed = MINOR_ADJUSTMENT_SPEED * (direction * -1);
+                    rightWheelSpeed = MINOR_ADJUSTMENT_SPEED * (direction * -1);
+                }
+                else
+                {
+                    step = 9;
+                    leftWheelSpeed = MINOR_ADJUSTMENT_SPEED * direction;
+                    rightWheelSpeed = MINOR_ADJUSTMENT_SPEED * direction;
+                }
+
+            }
+
+
+    for(int checkdifference = 0; checkdifference < 4; checkdifference++)
+            {
+                if(difference > (90 - (30 * checkdifference)))
+                {
+                    for(int turnstep = 0; turnstep < (3 - checkdifference); turnstep++)
+                    {
+                        gyroTurns((0.4 + (0.2 * turnstep)), (gyro.getIntegratedZValue() + directionvalue));
+                    }
+                    gyroTurns((1.0 - (0.2 * checkdifference)), (gyro.getIntegratedZValue() + ((difference - (90 - (30 * checkdifference))) * (directionvalue / (Math.abs(directionvalue))))));
+                    for(int turnstep = checkdifference; turnstep < 3; turnstep++)
+                    {
+                        gyroTurns(((0.8 - (0.2 * turnstep))), (gyro.getIntegratedZValue() + directionvalue));
+                    }
+                    break;
+                }
+            }
+
