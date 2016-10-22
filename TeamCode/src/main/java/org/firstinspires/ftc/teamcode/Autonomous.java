@@ -37,18 +37,13 @@ public class Autonomous extends DefineEverything {
     boolean currentEndOnCornerVortex = false;
 
     // Variables for displaying information in init loop
-    String initLoopHeaderString = "";
-    String currentAllianceString = "";
-    String currentStartingCoordinatesString = "";
-    String currentDelayString = "";
-    String currentBeaconsToGetString = "";
-    String currentShootBeforeBeaconsString = "";
-    String currentDefenseString = "";
-    String currentDelayBeforeDefenseString = "";
-    String currentMovementsForDefenseString = "";
-    String currentDelayBeforeShootingString = "";
-    String currentMovementsToShootString = "";
-    String currentEndOnCornerVortexString = "";
+    String[] headerStringArray = {"Red 2 Beacon Shoot Basic", "Blue 2 Beacon Shoot Basic"}; // Variables that change with buttons
+    int headerStringArrayLocation = 0;
+    int sideToSideLocation = 0;
+    int upAndDownLocation = 1;
+    double[] fillerDoubleArray = {0.0, 0.0};
+
+    String[] allParametersStringArray = new String[11]; // Final strings that display
 
     // Variable for starting the autonomous thread
     int val = (int)NOTHING;
@@ -607,6 +602,12 @@ public class Autonomous extends DefineEverything {
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
         FLW.setDirection(DcMotorSimple.Direction.REVERSE);
 
+        // Initialize all values of the parameters string array
+        for(int h = 0; h < allParametersStringArray.length; h++)
+        {
+            allParametersStringArray[h] = "";
+        }
+
         initializeAllSensorsSlashEncoders();
     }
 
@@ -622,21 +623,277 @@ public class Autonomous extends DefineEverything {
      */
     @Override
     public void init_loop() {
+        if(gamepad1.left_bumper && headerStringArrayLocation > 0)
+        {
+            headerStringArrayLocation--;
+            while(gamepad1.left_bumper)
+            {
 
+            }
+        }
+        if(gamepad1.right_bumper && headerStringArrayLocation < (headerStringArray.length - 1))
+        {
+            headerStringArrayLocation++;
+            while(gamepad1.right_bumper)
+            {
+
+            }
+        }
+        switch(headerStringArrayLocation)
+        {
+            case 0:
+                currentAlliance = RED;
+                currentStartingCoordinates[0] = 2.0;
+                currentStartingCoordinates[1] = 0.36458;
+                currentDelay = 0;
+                currentBeaconsToGet[0] = true;
+                currentBeaconsToGet[1] = true;
+                currentShootBeforeBeacons = false;
+                currentDefense = false;
+                currentDelayBeforeDefense = 0;
+                currentMovementsForDefense.clear();
+                currentDelayBeforeShooting = 0;
+                currentMovementsToShoot.clear();
+                fillerDoubleArray[0] = 1.5;
+                fillerDoubleArray[1] = 3.5;
+                currentMovementsToShoot.add(fillerDoubleArray);
+                currentEndOnCornerVortex = false;
+            case 1:
+                currentAlliance = BLUE;
+                currentStartingCoordinates[0] = 4.0;
+                currentStartingCoordinates[1] = 0.36458;
+                currentDelay = 0;
+                currentBeaconsToGet[0] = true;
+                currentBeaconsToGet[1] = true;
+                currentShootBeforeBeacons = false;
+                currentDefense = false;
+                currentDelayBeforeDefense = 0;
+                currentMovementsForDefense.clear();
+                currentDelayBeforeShooting = 0;
+                currentMovementsToShoot.clear();
+                fillerDoubleArray[0] = 4.5;
+                fillerDoubleArray[1] = 3.5;
+                currentMovementsToShoot.add(fillerDoubleArray);
+                currentEndOnCornerVortex = false;
+            default:
+
+        }
+
+        if(gamepad1.dpad_up && upAndDownLocation < (allParametersStringArray.length - 1))
+        {
+            upAndDownLocation++;
+            sideToSideLocation = 0;
+            while(gamepad1.dpad_up)
+            {
+
+            }
+        }
+        if(gamepad1.dpad_down && headerStringArrayLocation > 0)
+        {
+            upAndDownLocation--;
+            sideToSideLocation = 0;
+            while(gamepad1.dpad_down)
+            {
+
+            }
+        }
+
+        switch(upAndDownLocation)
+        {
+            case 0:
+                if(gamepad1.y)
+                {
+                    currentAlliance = true;
+                }
+                if(gamepad1.a)
+                {
+                    currentAlliance = false;
+                }
+                allParametersStringArray[0]  = currentAlliance + "*";
+                break;
+            case 1:
+                if(gamepad1.dpad_left && sideToSideLocation > 0)
+                {
+                    sideToSideLocation--;
+                    while(gamepad1.dpad_left)
+                    {
+
+                    }
+                }
+                if(gamepad1.dpad_right && sideToSideLocation < 1)
+                {
+                    sideToSideLocation++;
+                    while(gamepad1.dpad_right)
+                    {
+
+                    }
+                }
+                if(gamepad1.y)
+                {
+                    currentStartingCoordinates[sideToSideLocation] += 0.1;
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentStartingCoordinates[sideToSideLocation] += 0.01;
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentStartingCoordinates[sideToSideLocation] -= 0.1;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    currentStartingCoordinates[sideToSideLocation] -= 0.01;
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
+                if(sideToSideLocation == 0)
+                    allParametersStringArray[1] = currentStartingCoordinates[0] + "*," + currentStartingCoordinates[1];
+                else
+                    allParametersStringArray[1] = currentStartingCoordinates[0] + "," + currentStartingCoordinates[1] + "*";
+                break;
+            case 2:
+                if(gamepad1.y)
+                {
+                    currentDelay += 1000;
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentDelay += 100;
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentDelay -= 1000;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    currentDelay -= 100;
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
+                allParametersStringArray[2] = ((double)currentDelay / 1000) + "*";
+                break;
+            case 3:
+                if(gamepad1.dpad_left && sideToSideLocation > 0)
+                {
+                    sideToSideLocation--;
+                    while(gamepad1.dpad_left)
+                    {
+
+                    }
+                }
+                if(gamepad1.dpad_right && sideToSideLocation < 1)
+                {
+                    sideToSideLocation++;
+                    while(gamepad1.dpad_right)
+                    {
+
+                    }
+                }
+                if(gamepad1.y)
+                {
+                    currentBeaconsToGet[sideToSideLocation] = true;
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentBeaconsToGet[sideToSideLocation] = false;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(sideToSideLocation == 0)
+                    allParametersStringArray[3] = currentBeaconsToGet[0] + "*," + currentBeaconsToGet[1];
+                else
+                    allParametersStringArray[3] = currentBeaconsToGet[0] + "," + currentBeaconsToGet[1] + "*";
+                break;
+            case 4:
+                if(gamepad1.y)
+                {
+                    currentShootBeforeBeacons = true;
+                }
+                if(gamepad1.a)
+                {
+                    currentShootBeforeBeacons = false;
+                }
+                allParametersStringArray[4]  = currentShootBeforeBeacons + "*";
+                break;
+            case 5:
+                allParametersStringArray[5] = currentDefense + "";
+                break;
+            case 6:
+                allParametersStringArray[6] = currentDelayBeforeDefense + "";
+                break;
+            case 7:
+                allParametersStringArray[7] = "";
+                for(int u = 0; u < currentMovementsForDefense.size(); u++)
+                {
+                    allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
+                                                   currentMovementsForDefense.get(u)[1] + ") ";
+                }
+                break;
+            case 8:
+                allParametersStringArray[8] = currentDelayBeforeShooting + "";
+                break;
+            case 9:
+                allParametersStringArray[9] = "";
+                for(int u = 0; u < currentMovementsToShoot.size(); u++)
+                {
+                    allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
+                            currentMovementsToShoot.get(u)[1] + ") ";
+                }
+                break;
+            case 10:
+                allParametersStringArray[10] = currentEndOnCornerVortex + "";
+                break;
+            default:
+                break;
+        }
 
         // Display the current autonomous configuration
-        telemetry.addData("Pre-Set Autonomous ", initLoopHeaderString);
-        telemetry.addData("Alliance ", currentAllianceString);
-        telemetry.addData("Starting Coordinates ", currentStartingCoordinatesString);
-        telemetry.addData("Delay ", currentDelayString);
-        telemetry.addData("Beacons To Get ", currentBeaconsToGetString);
-        telemetry.addData("Shoot Before Beacons ", currentShootBeforeBeaconsString);
-        telemetry.addData("Defense " , currentDefenseString);
-        telemetry.addData("Delay Before Defense ", currentDelayBeforeDefenseString);
-        telemetry.addData("Movements For Defense ", currentMovementsForDefenseString);
-        telemetry.addData("Delay Before Shooting ", currentDelayBeforeShootingString);
-        telemetry.addData("Movements To Shoot ", currentMovementsToShootString);
-        telemetry.addData("End on Corner Vortex", currentEndOnCornerVortexString);
+        telemetry.addData("Pre-Set Autonomous ", headerStringArray[headerStringArrayLocation]);
+        telemetry.addData("Alliance ", allParametersStringArray[0]);
+        telemetry.addData("Starting Coordinates ", allParametersStringArray[1]);
+        telemetry.addData("Delay ", allParametersStringArray[2]);
+        telemetry.addData("Beacons To Get ", allParametersStringArray[3]);
+        telemetry.addData("Shoot Before Beacons ", allParametersStringArray[4]);
+        telemetry.addData("Defense " , allParametersStringArray[5]);
+        telemetry.addData("Delay Before Defense ", allParametersStringArray[6]);
+        telemetry.addData("Movements For Defense ", allParametersStringArray[7]);
+        telemetry.addData("Delay Before Shooting ", allParametersStringArray[8]);
+        telemetry.addData("Movements To Shoot ", allParametersStringArray[9]);
+        telemetry.addData("End on Corner Vortex", allParametersStringArray[10]);
     }
 
     /*
