@@ -42,8 +42,14 @@ public class DefineEverything extends OpMode {
     final int BACKWARD = -1; // General
     final int FORWARD = 1;
     final int OVERRUN_CORRECTION_WAIT_TIME = 200;
-    final double MINIMUM_WHEEL_POWER_TO_MOVE = 0.05;
-    final double RAMP_UP_START_SPEED = 0.4;
+    final double MINIMUM_WHEEL_POWER_TO_MOVE = 0.4;
+    final double RAMP_UP_START_SPEED = 0.5;
+    final int TICKS_PER_WHEEL_MOTOR_ROTATION = 1120;
+    final double WHEEL_GEAR_RATIO = 4;
+    final double WHEEL_DIAMETER = 4;
+    final double ENCODER_TICKS_TO_MOVE_ONE_TILE = (24 / (WHEEL_DIAMETER * Math.PI * WHEEL_GEAR_RATIO)) * TICKS_PER_WHEEL_MOTOR_ROTATION;
+    final boolean RED = true;
+    final boolean BLUE = false;
 
     final int ENCODER_CALIBRATION_WAIT_TIME = 100; // Initialize function
     final int GYRO_CALIBRATION_WAIT_TIME = 50;
@@ -63,9 +69,6 @@ public class DefineEverything extends OpMode {
 
     final int STRAIGHT_ANGLE = 180; // Move to position
     final int POWER_OF_TWO = 2;
-    final double ENCODER_TICKS_TO_MOVE_ONE_TILE = (802.141590723 * 2);
-
-
 
     /*
      * Code to run when the op mode is first enabled goes here

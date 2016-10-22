@@ -20,6 +20,7 @@ public class ExampleTeleOp extends OpMode {
     double flywheelSpeed = 0.0;
     double targetFlywheelSpeed = 0.0;
     long timerVar = 0;
+    double backIntakeSpeed = 0.0;
 
     DcMotor FRW; // Drive
     DcMotor BRW;
@@ -30,6 +31,11 @@ public class ExampleTeleOp extends OpMode {
     DcMotor LRFW;
     DcMotor ULFW;
     DcMotor LLFW;
+
+    //Servo FI;
+    Servo BI;
+
+
 
     /*
      * Code to run when the op mode is first enabled goes here
@@ -48,9 +54,16 @@ public class ExampleTeleOp extends OpMode {
         ULFW = hardwareMap.dcMotor.get("ULFW");
         LLFW = hardwareMap.dcMotor.get("LLFW");
 
+        //FI = hardwareMap.servo.get("FI");
+        BI = hardwareMap.servo.get("BI");
+
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
-        FLW.setDirection(DcMotorSimple.Direction.REVERSE);
+        FRW.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // Reverse Flywheels
+        ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
+        LRFW.setDirection(DcMotorSimple.Direction.REVERSE);
 
     }
 
@@ -72,16 +85,16 @@ public class ExampleTeleOp extends OpMode {
         if(gamepad1.right_bumper)
         {
             rightSpeed = gamepad1.right_stick_y;
-            leftSpeed = gamepad1.right_stick_y;
+            leftSpeed = gamepad1.left_stick_y;
         }
         else
         {
             rightSpeed = (gamepad1.right_stick_y / 2);
-            leftSpeed = (gamepad1.right_stick_y / 2);
+            leftSpeed = (gamepad1.left_stick_y / 2);
         }
         runRightWheels(rightSpeed);
         runLeftWheels(leftSpeed);
-        if(targetFlywheelSpeed != flywheelSpeed && (timerVar == 0 || System.currentTimeMillis() > (timerVar + 40)))
+        if(targetFlywheelSpeed != flywheelSpeed && (timerVar == 0 || System.currentTimeMillis() > (timerVar + 30)))
         {
             flywheelSpeed += (((targetFlywheelSpeed - flywheelSpeed) / (Math.abs(targetFlywheelSpeed - flywheelSpeed))) * 0.01);
             timerVar = System.currentTimeMillis();
@@ -90,8 +103,43 @@ public class ExampleTeleOp extends OpMode {
         {
             timerVar = 0;
         }
+
+        runFlywheels(flywheelSpeed);
+
+        if(gamepad1.left_bumper)
+        {
+            backIntakeSpeed = 0.9;
+        }
+        else if(gamepad1.left_trigger > 0)
+        {
+            backIntakeSpeed = 0.1;
+        }
+        else
+        {
+            backIntakeSpeed = 0.5;
+        }
+
+        BI.setPosition(backIntakeSpeed);
+
+        if(gamepad1.a)
+        {
+            targetFlywheelSpeed = 0.0;
+        }
+        else if(gamepad1.b)
+        {
+            targetFlywheelSpeed = 0.6;
+        }
+        else if(gamepad1.x)
+        {
+            targetFlywheelSpeed = 0.8;
+        }
+        else if(gamepad1.y)
+        {
+            targetFlywheelSpeed = 1.0;
+        }
         telemetry.addData("Right Speed ", rightSpeed);
         telemetry.addData("Left Speed ", leftSpeed);
+        telemetry.addData("Flywheel Speed", flywheelSpeed);
     }
 
     /*
@@ -114,6 +162,15 @@ public class ExampleTeleOp extends OpMode {
         speed = Range.clip(speed, -1.0, 1.0);
         FLW.setPower(speed);
         BLW.setPower(speed);
+    }
+
+    void runFlywheels(double speed)
+    {
+        speed = Range.clip(speed, -1.0, 1.0);
+        ULFW.setPower(speed);
+        URFW.setPower(speed);
+        LLFW.setPower(speed);
+        LRFW.setPower(speed);
     }
 
 

@@ -6,6 +6,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.ArrayList;
+
 /**
  * Created by Conno on 9/22/2016.
  */
@@ -20,6 +22,33 @@ public class Autonomous extends DefineEverything {
     // Speeds of the motors to be changed by autonomous thread
     double rightWheelSpeed = STOP_MOTOR_SPEED;
     double leftWheelSpeed = STOP_MOTOR_SPEED;
+
+    // Autonomous variables to change in init loop
+    boolean currentAlliance = BLUE;
+    double[] currentStartingCoordinates = {0.0, 0.0};
+    int currentDelay = 0;
+    boolean[] currentBeaconsToGet = {false, false};
+    boolean currentShootBeforeBeacons = false;
+    boolean currentDefense = false;
+    int currentDelayBeforeDefense = 0;
+    ArrayList<double[]> currentMovementsForDefense;
+    int currentDelayBeforeShooting = 0;
+    ArrayList<double[]> currentMovementsToShoot;
+    boolean currentEndOnCornerVortex = false;
+
+    // Variables for displaying information in init loop
+    String initLoopHeaderString = "";
+    String currentAllianceString = "";
+    String currentStartingCoordinatesString = "";
+    String currentDelayString = "";
+    String currentBeaconsToGetString = "";
+    String currentShootBeforeBeaconsString = "";
+    String currentDefenseString = "";
+    String currentDelayBeforeDefenseString = "";
+    String currentMovementsForDefenseString = "";
+    String currentDelayBeforeShootingString = "";
+    String currentMovementsToShootString = "";
+    String currentEndOnCornerVortexString = "";
 
     // Variable for starting the autonomous thread
     int val = (int)NOTHING;
@@ -111,6 +140,33 @@ public class Autonomous extends DefineEverything {
             {
                 leftWheelSpeed = speed;
                 rightWheelSpeed = -speed;
+            }
+        }
+    }
+
+    /*
+    * This turns the robot at a certain speed until a certain gyro position
+    * Use only positive speeds
+    * @param double speed - the speed of the robot while turning
+    * @param int targetPosition - the position to turn to relative to starting
+    */
+    void gyroTurnsDifferentWheels(double speedR, double speedL, int targetPosition)
+    {
+        // Turn the correct direction
+        if(targetPosition < gyro.getIntegratedZValue())
+        {
+            while(gyro.getIntegratedZValue() > targetPosition)
+            {
+                leftWheelSpeed = -speedL;
+                rightWheelSpeed = speedR;
+            }
+        }
+        else
+        {
+            while(gyro.getIntegratedZValue() < targetPosition)
+            {
+                leftWheelSpeed = speedL;
+                rightWheelSpeed = -speedR;
             }
         }
     }
@@ -273,6 +329,30 @@ public class Autonomous extends DefineEverything {
     }
 
     /*
+     * angleToTurnToLocation - Figures out the angle to turn to look
+     *                         at a different location
+     * @param double x - The x coordinate of the different location
+     * @param double y - The y coordinate of the different location
+     * @return int - The angle to turn to
+     */
+    int angleToTurnToLocation(double x, double y)
+    {
+        double dX = Math.abs(currentX - x);
+        double dY = Math.abs(currentY - y);
+        double hypotenuse = (Math.sqrt((Math.pow(dX, POWER_OF_TWO)) + (Math.pow(dY, POWER_OF_TWO))));
+        double angle = Math.toDegrees(Math.asin(((dX) / (hypotenuse))));
+        if(currentY > 2.5)
+        {
+            angle = STRAIGHT_ANGLE - angle;
+        }
+        if(currentX < 2.5)
+        {
+            angle = -angle;
+        }
+        return ((int)(angle + 0.5));
+    }
+
+    /*
      * moveToPosition - This will move the robot to the desired position
      *                  It is based on cartesian coordinates with the origin being the
      *                  left corner from where you start and the middle of the robot
@@ -289,27 +369,31 @@ public class Autonomous extends DefineEverything {
         double dX = Math.abs(currentX - x);
         double dY = Math.abs(currentY - y);
         double driveDistance = (Math.sqrt((Math.pow(dX, POWER_OF_TWO)) + (Math.pow(dY, POWER_OF_TWO))));
-        double angle = Math.toDegrees(Math.asin(((dX) / (driveDistance))));
+        int angle = angleToTurnToLocation(x, y);
 
         // Get starting values
         int actualAngle = gyro.getIntegratedZValue();
-        int actualDistance = getRightWheelEncoderValue();
+        double actualDistance = getRightWheelEncoderValue();
+        int direction = FORWARD;
 
-        // Adjust angle for what quadrant the triangle was in
-        if(currentY > y)
+        if(Math.abs(Math.abs(angle) - Math.abs(gyro.getIntegratedZValue())) > 90)
         {
-            angle = STRAIGHT_ANGLE - angle;
-        }
-        if(currentX < x)
-        {
-            angle = -angle;
+            if(angle > 0)
+            {
+                angle -= STRAIGHT_ANGLE;
+            }
+            else
+            {
+                angle += STRAIGHT_ANGLE;
+            }
+            direction = BACKWARD;
         }
 
         // Turn then drive forward to new position and set it as current position
-        rampTurnGyro((int)(angle + 0.5));
+        rampTurnGyro(angle);
         actualAngle = Math.abs(gyro.getIntegratedZValue() - actualAngle); // Get the final turn value
-        driveTiles(FORWARD, (int)(driveDistance + 0.5));
-        actualDistance = Math.abs(actualDistance - getRightWheelEncoderValue()); // Get the final distance driven
+        driveTiles(direction, (int)(driveDistance + 0.5));
+        actualDistance = (Math.abs(actualDistance - getRightWheelEncoderValue()) / ENCODER_TICKS_TO_MOVE_ONE_TILE); // Get the final distance driven
 
         // Set the new position
         if(currentX > x)
@@ -324,6 +408,158 @@ public class Autonomous extends DefineEverything {
     }
 
     /*
+     * positionRedBlue - To run in order to mirror autonomous based on alliance
+     * @param double x - The x position to move to
+     * @param double y - The y position to move to
+     * @param alliance - The alliance that you are on
+     */
+    void positionRedBlue(double x, double y, boolean alliance)
+    {
+        if(alliance == RED)
+        {
+            moveToPosition((6 - x), y);
+        }
+        else
+        {
+            moveToPosition(x, y);
+        }
+    }
+
+    /*
+     * allAutonomous - The function to run for autonomous. Can be customized for any situation
+     * @param boolean alliance - The alliance you are currently on
+     * @param double[] startingCoordinates - The coordinated the middle of the robot starts at
+     * @param int delay - The milliseconds to wait before starting autonomous
+     * @param boolean[] beaconsToGet - Which beacons you want to push
+     * @param boolean shootBeforeBeacon - If you want to shoot into the center goal before going
+     *                                    for the beacons
+     * @param boolean defense - If you want to play defense on the opponents beacons
+     * @param int delayBeforeDefense - The amount of milliseconds to wait before defense
+     * @param double[][] movementsForDefense - The locations to move to play defense
+     * @param int delayBeforeShooting - The delay to wait before going to shoot.
+     *                                  0 if no delay or shooting before beacons
+     *                                  Over 30000 if not shooting
+     * @param double[][] movementsToShoot - The locations to run to in order to shoot in center vortex
+     * @param boolean endOnCornerVortex - If you want to end on the corner vortex ramp to catch the
+     *                                    extra balls that fall down the ramp
+     */
+    void allAutonomous(boolean alliance, double[] startingCoordinates, int delay,
+                       boolean[] beaconsToGet, boolean shootBeforeBeacons, boolean defense,
+                       int delayBeforeDefense, ArrayList<double[]> movementsForDefense, int delayBeforeShooting,
+                       ArrayList<double[]> movementsToShoot, boolean endOnCornerVortex)
+    {
+        currentX = startingCoordinates[0];
+        currentY = startingCoordinates[1];
+        doDaSleep(delay);
+        moveToPosition(currentX, 0.5);
+
+        if(shootBeforeBeacons)
+        {
+            for(int i = 0; i < movementsToShoot.size(); i++)
+            {
+                moveToPosition(movementsToShoot.get(i)[0], movementsToShoot.get(i)[1]);
+            }
+
+            if(alliance == RED)
+            {
+                rampTurnGyro(angleToTurnToLocation(2.5, 2.5));
+            }
+            else
+            {
+                rampTurnGyro(angleToTurnToLocation(3.5, 2.5));
+            }
+            // Target Flywheel speed = speed to launch at
+            // While speed is not equal sleep 10
+            // Run intake to shoot balls
+            // Target Flywheel speed = 0.0;
+            // While speed is not 0 sleep 10
+        }
+
+        if(beaconsToGet[0])
+        {
+            positionRedBlue(5.5, 2.10375, alliance);
+            if(alliance == RED)
+                rampTurnGyro(180);
+            else
+                rampTurnGyro(0);
+            // Run beacon pusher Vex motor out to sensing position
+            if(isColorRed() == alliance)
+            {
+                // Push button and retract to sensing position
+            }
+            else
+            {
+                positionRedBlue(5.5, 2.33375, alliance);
+                // Push button and retract to sensing position
+            }
+        }
+        else if(beaconsToGet[1])
+        {
+            positionRedBlue(4.5, 1.5, alliance);
+            positionRedBlue(5.5, 4.10375, alliance);
+            if(alliance == RED)
+                rampTurnGyro(180);
+            else
+                rampTurnGyro(0);
+        }
+
+        if(beaconsToGet[1])
+        {
+            positionRedBlue(5.5, 4.10375, alliance);
+            // Run beacon pusher Vex motor out to sensing position
+            if(isColorRed() == alliance)
+            {
+                // Push button and retract to sensing position
+            }
+            else
+            {
+                positionRedBlue(5.5, 4.33375, alliance);
+                // Push button and retract to sensing position
+            }
+        }
+
+        if(!shootBeforeBeacons && delayBeforeShooting < 30000)
+        {
+            doDaSleep(delayBeforeShooting);
+
+            for(int i = 0; i < movementsToShoot.size(); i++)
+            {
+                moveToPosition(movementsToShoot.get(i)[0], movementsToShoot.get(i)[1]);
+            }
+
+            if(alliance == RED)
+            {
+                rampTurnGyro(angleToTurnToLocation(2.5, 2.5));
+            }
+            else
+            {
+                rampTurnGyro(angleToTurnToLocation(3.5, 2.5));
+            }
+            // Target Flywheel speed = speed to launch at
+            // While speed is not equal sleep 10
+            // Run intake to shoot balls
+            // Target Flywheel speed = 0.0;
+            // While speed is not 0 sleep 10
+        }
+
+        if(defense)
+        {
+            doDaSleep(delayBeforeDefense);
+            for(int i = 0; i < movementsForDefense.size(); i++)
+            {
+                moveToPosition(movementsForDefense.get(i)[0], movementsForDefense.get(i)[1]);
+            }
+        }
+        else if(endOnCornerVortex)
+        {
+            positionRedBlue(5.5, 2, alliance);
+            rampTurnGyro(180);
+            encoderDrives(MINIMUM_WHEEL_POWER_TO_MOVE, (int)(ENCODER_TICKS_TO_MOVE_ONE_TILE / 10), FORWARD);
+        }
+
+    }
+
+    /*
      * AutoPro - The thread to run the autonomous that sets the motor powers
      *           and lets the main loop set the motors to those speeds, doing
      *           this because this makes more sense to me than state machines
@@ -331,7 +567,10 @@ public class Autonomous extends DefineEverything {
     Runnable AutoPro = new Runnable() {
         public void run() {
             // Run autonomous
-            moveToPosition(1, 1);
+            allAutonomous(currentAlliance, currentStartingCoordinates, currentDelay,
+                          currentBeaconsToGet, currentShootBeforeBeacons, currentDefense,
+                          currentDelayBeforeDefense, currentMovementsForDefense, currentDelayBeforeShooting,
+                          currentMovementsToShoot, currentEndOnCornerVortex);
 
             // At the end of the autonomous routine stop motors
             rightWheelSpeed = STOP_MOTOR_SPEED;
@@ -369,6 +608,35 @@ public class Autonomous extends DefineEverything {
         FLW.setDirection(DcMotorSimple.Direction.REVERSE);
 
         initializeAllSensorsSlashEncoders();
+    }
+
+    /*
+     boolean alliance, double[] startingCoordinates, int delay,
+                       boolean[] beaconsToGet, boolean shootBeforeBeacons, boolean defense,
+                       int delayBeforeDefense, ArrayList<double[]> movementsForDefense, int delayBeforeShooting,
+                       ArrayList<double[]> movementsToShoot, boolean endOnCornerVortex
+     */
+    /*
+     * Code to run when the op mode is first enabled goes here
+     * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
+     */
+    @Override
+    public void init_loop() {
+
+
+        // Display the current autonomous configuration
+        telemetry.addData("Pre-Set Autonomous ", initLoopHeaderString);
+        telemetry.addData("Alliance ", currentAllianceString);
+        telemetry.addData("Starting Coordinates ", currentStartingCoordinatesString);
+        telemetry.addData("Delay ", currentDelayString);
+        telemetry.addData("Beacons To Get ", currentBeaconsToGetString);
+        telemetry.addData("Shoot Before Beacons ", currentShootBeforeBeaconsString);
+        telemetry.addData("Defense " , currentDefenseString);
+        telemetry.addData("Delay Before Defense ", currentDelayBeforeDefenseString);
+        telemetry.addData("Movements For Defense ", currentMovementsForDefenseString);
+        telemetry.addData("Delay Before Shooting ", currentDelayBeforeShootingString);
+        telemetry.addData("Movements To Shoot ", currentMovementsToShootString);
+        telemetry.addData("End on Corner Vortex", currentEndOnCornerVortexString);
     }
 
     /*
