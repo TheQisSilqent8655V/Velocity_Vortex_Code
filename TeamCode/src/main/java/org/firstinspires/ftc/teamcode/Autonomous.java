@@ -850,10 +850,50 @@ public class Autonomous extends DefineEverything {
                 allParametersStringArray[4]  = currentShootBeforeBeacons + "*";
                 break;
             case 5:
+                if(gamepad1.y)
+                {
+                    currentDefense = true;
+                }
+                if(gamepad1.a)
+                {
+                    currentDefense = false;
+                }
                 allParametersStringArray[5] = currentDefense + "";
                 break;
             case 6:
-                allParametersStringArray[6] = currentDelayBeforeDefense + "";
+                if(gamepad1.y)
+                {
+                    currentDelayBeforeDefense += 1000;
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentDelayBeforeDefense += 100;
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentDelayBeforeDefense -= 1000;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    currentDelayBeforeDefense -= 100;
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
+                allParametersStringArray[6] = ((double)currentDelayBeforeDefense / 1000) + "*";
                 break;
             case 7:
                 allParametersStringArray[7] = "";
@@ -864,7 +904,39 @@ public class Autonomous extends DefineEverything {
                 }
                 break;
             case 8:
-                allParametersStringArray[8] = currentDelayBeforeShooting + "";
+                if(gamepad1.y)
+                {
+                    currentDelayBeforeShooting += 1000;
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentDelayBeforeShooting += 100;
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentDelayBeforeShooting -= 1000;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    currentDelayBeforeShooting -= 100;
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
+                allParametersStringArray[8] = ((double)currentDelayBeforeShooting / 1000) + "*";
                 break;
             case 9:
                 allParametersStringArray[9] = "";
@@ -875,6 +947,14 @@ public class Autonomous extends DefineEverything {
                 }
                 break;
             case 10:
+                if(gamepad1.y)
+                {
+                    currentEndOnCornerVortex = true;
+                }
+                if(gamepad1.a)
+                {
+                    currentEndOnCornerVortex = false;
+                }
                 allParametersStringArray[10] = currentEndOnCornerVortex + "";
                 break;
             default:
