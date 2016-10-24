@@ -37,11 +37,12 @@ public class Autonomous extends DefineEverything {
     boolean currentEndOnCornerVortex = false;
 
     // Variables for displaying information in init loop
-    String[] headerStringArray = {"Red 2 Beacon Shoot Basic", "Blue 2 Beacon Shoot Basic"}; // Variables that change with buttons
+    String[] headerStringArray = {"Red 2 Beacon Shoot Basic", "Blue 2 Beacon Shoot Basic", "Custom"}; // Variables that change with buttons
     int headerStringArrayLocation = 0;
     int sideToSideLocation = 0;
     int upAndDownLocation = 1;
     double[] fillerDoubleArray = {0.0, 0.0};
+    boolean changedHeader = false;
 
     String[] allParametersStringArray = new String[11]; // Final strings that display
 
@@ -630,6 +631,7 @@ public class Autonomous extends DefineEverything {
             {
 
             }
+            changedHeader = true;
         }
         if(gamepad1.right_bumper && headerStringArrayLocation < (headerStringArray.length - 1))
         {
@@ -638,46 +640,88 @@ public class Autonomous extends DefineEverything {
             {
 
             }
+            changedHeader = true;
         }
-        switch(headerStringArrayLocation)
+        if(changedHeader)
         {
-            case 0:
-                currentAlliance = RED;
-                currentStartingCoordinates[0] = 2.0;
-                currentStartingCoordinates[1] = 0.36458;
-                currentDelay = 0;
-                currentBeaconsToGet[0] = true;
-                currentBeaconsToGet[1] = true;
-                currentShootBeforeBeacons = false;
-                currentDefense = false;
-                currentDelayBeforeDefense = 0;
-                currentMovementsForDefense.clear();
-                currentDelayBeforeShooting = 0;
-                currentMovementsToShoot.clear();
-                fillerDoubleArray[0] = 1.5;
-                fillerDoubleArray[1] = 3.5;
-                currentMovementsToShoot.add(fillerDoubleArray);
-                currentEndOnCornerVortex = false;
-            case 1:
-                currentAlliance = BLUE;
-                currentStartingCoordinates[0] = 4.0;
-                currentStartingCoordinates[1] = 0.36458;
-                currentDelay = 0;
-                currentBeaconsToGet[0] = true;
-                currentBeaconsToGet[1] = true;
-                currentShootBeforeBeacons = false;
-                currentDefense = false;
-                currentDelayBeforeDefense = 0;
-                currentMovementsForDefense.clear();
-                currentDelayBeforeShooting = 0;
-                currentMovementsToShoot.clear();
-                fillerDoubleArray[0] = 4.5;
-                fillerDoubleArray[1] = 3.5;
-                currentMovementsToShoot.add(fillerDoubleArray);
-                currentEndOnCornerVortex = false;
-            default:
+            switch(headerStringArrayLocation)
+            {
+                case 0:
+                    currentAlliance = RED;
+                    allParametersStringArray[0] = "true"
+                    currentStartingCoordinates[0] = 2.0;
+                    currentStartingCoordinates[1] = 0.36458;
+                    allParametersStringArray[1] = "(2.0,0.36458)";
+                    currentDelay = 0;
+                    allParametersStringArray[2] = "0";
+                    currentBeaconsToGet[0] = true;
+                    currentBeaconsToGet[1] = true;
+                    allParametersStringArray[3] = "true,true";
+                    currentShootBeforeBeacons = false;
+                    allParametersStringArray[4] = "false";
+                    currentDefense = false;
+                    allParametersStringArray[5] = "false";
+                    currentDelayBeforeDefense = 0;
+                    allParametersStringArray[6] = "0";
+                    currentMovementsForDefense.clear();
+                    allParametersStringArray[7] = "";
+                    currentDelayBeforeShooting = 0;
+                    allParametersStringArray[8] = "0";
+                    currentMovementsToShoot.clear();
+                    fillerDoubleArray[0] = 1.5;
+                    fillerDoubleArray[1] = 3.5;
+                    currentMovementsToShoot.add(fillerDoubleArray);
+                    allParametersStringArray[9] = "(1.5,3.5)";
+                    currentEndOnCornerVortex = false;
+                    allParametersStringArray[10] = "false";
+                case 1:
+                    currentAlliance = BLUE;
+                    allParametersStringArray[0] = "false"
+                    currentStartingCoordinates[0] = 4.0;
+                    currentStartingCoordinates[1] = 0.36458;
+                    allParametersStringArray[1] = "(4.0,0.36458)";
+                    currentDelay = 0;
+                    allParametersStringArray[2] = "0";
+                    currentBeaconsToGet[0] = true;
+                    currentBeaconsToGet[1] = true;
+                    allParametersStringArray[3] = "true,true";
+                    currentShootBeforeBeacons = false;
+                    allParametersStringArray[4] = "false";
+                    currentDefense = false;
+                    allParametersStringArray[5] = "false";
+                    currentDelayBeforeDefense = 0;
+                    allParametersStringArray[6] = "0";
+                    currentMovementsForDefense.clear();
+                    allParametersStringArray[7] = "";
+                    currentDelayBeforeShooting = 0;
+                    allParametersStringArray[8] = "0";
+                    currentMovementsToShoot.clear();
+                    fillerDoubleArray[0] = 4.5;
+                    fillerDoubleArray[1] = 3.5;
+                    currentMovementsToShoot.add(fillerDoubleArray);
+                    allParametersStringArray[9] = "(4.5,3.5)";
+                    currentEndOnCornerVortex = false;
+                    allParametersStringArray[10] = "false";
+                case 2:
+                    currentAlliance = RED;
+                    currentStartingCoordinates[0] = 0.0;
+                    currentStartingCoordinates[1] = 0.0;
+                    currentDelay = 0;
+                    currentBeaconsToGet[0] = false;
+                    currentBeaconsToGet[1] = false;
+                    currentShootBeforeBeacons = false;
+                    currentDefense = false;
+                    currentDelayBeforeDefense = 0;
+                    currentMovementsForDefense.clear();
+                    currentDelayBeforeShooting = 0;
+                    currentMovementsToShoot.clear();
+                    currentEndOnCornerVortex = false;
+                default:
 
+            }
+            changedHeader = false;
         }
+        
 
         if(gamepad1.dpad_up && upAndDownLocation < (allParametersStringArray.length - 1))
         {
