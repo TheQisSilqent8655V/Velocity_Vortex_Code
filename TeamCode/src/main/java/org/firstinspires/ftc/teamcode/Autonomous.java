@@ -704,18 +704,29 @@ public class Autonomous extends DefineEverything {
                     allParametersStringArray[10] = "false";
                 case 2:
                     currentAlliance = RED;
+                    allParametersStringArray[0] = "true"
                     currentStartingCoordinates[0] = 0.0;
                     currentStartingCoordinates[1] = 0.0;
+                    allParametersStringArray[1] = "(0.0,0.0)";
                     currentDelay = 0;
+                    allParametersStringArray[2] = "0";
                     currentBeaconsToGet[0] = false;
                     currentBeaconsToGet[1] = false;
+                    allParametersStringArray[3] = "false,false";
                     currentShootBeforeBeacons = false;
+                    allParametersStringArray[4] = "false";
                     currentDefense = false;
+                    allParametersStringArray[5] = "false";
                     currentDelayBeforeDefense = 0;
+                    allParametersStringArray[6] = "0";
                     currentMovementsForDefense.clear();
+                    allParametersStringArray[7] = "";
                     currentDelayBeforeShooting = 0;
+                    allParametersStringArray[8] = "0";
                     currentMovementsToShoot.clear();
+                    allParametersStringArray[9] = "";
                     currentEndOnCornerVortex = false;
+                    allParametersStringArray[10] = "false";
                 default:
 
             }
@@ -941,10 +952,81 @@ public class Autonomous extends DefineEverything {
                 break;
             case 7:
                 allParametersStringArray[7] = "";
+                if(gamepad1.dpad_left && sideToSideLocation > 0)
+                {
+                    sideToSideLocation--;
+                    if(sideToSideLocation % 2 == 0 && currentMovementsForDefense.get(sideToSideLocation / 2)[0] == 0.0
+                       && currentMovementsForDefense.get(sideToSideLocation / 2)[1] == 0.0)
+                    {
+                        currentMovementsForDefense.remove(sideToSideLocation / 2);
+                    }
+                    while(gamepad1.dpad_left)
+                    {
+
+                    }
+                }
+                if(gamepad1.dpad_right)
+                {
+                    sideToSideLocation++;
+                    if((sideToSideLocation + 1) == (currentMovementsForDefense.size() * 2))
+                    {
+                        fillerDoubleArray[0] = 0.0;
+                        fillerDoubleArray[1] = 0.0;
+                        currentMovementsForDefense.add(fillerDoubleArray);
+                    }
+                    while(gamepad1.dpad_right)
+                    {
+
+                    }
+                }
+                if(gamepad1.y)
+                {
+                    while(gamepad1.y)
+                    {
+
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
                 for(int u = 0; u < currentMovementsForDefense.size(); u++)
                 {
-                    allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
-                                                   currentMovementsForDefense.get(u)[1] + ") ";
+                    if(sideToSideLocation / 2 == u || currentMovementsForDefense.size() == 1)
+                    {
+                        if(sideToSideLocation % 2 == 0)
+                        {
+                            allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "*," +
+                                                       currentMovementsForDefense.get(u)[1] + ") ";
+                        }
+                        else
+                        {
+                            allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
+                                                       currentMovementsForDefense.get(u)[1] + "*) ";
+                        }
+                    }
+                    else
+                    {
+                        allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
+                                                       currentMovementsForDefense.get(u)[1] + ") ";
+                    }
                 }
                 break;
             case 8:
