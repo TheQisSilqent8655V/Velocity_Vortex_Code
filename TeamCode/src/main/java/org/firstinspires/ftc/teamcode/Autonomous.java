@@ -613,12 +613,6 @@ public class Autonomous extends DefineEverything {
     }
 
     /*
-     boolean alliance, double[] startingCoordinates, int delay,
-                       boolean[] beaconsToGet, boolean shootBeforeBeacons, boolean defense,
-                       int delayBeforeDefense, ArrayList<double[]> movementsForDefense, int delayBeforeShooting,
-                       ArrayList<double[]> movementsToShoot, boolean endOnCornerVortex
-     */
-    /*
      * Code to run when the op mode is first enabled goes here
      * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
      */
@@ -730,10 +724,11 @@ public class Autonomous extends DefineEverything {
                 default:
 
             }
+            upAndDownLocation = 0;
+            sideToSideLocation = 0;
             changedHeader = false;
         }
         
-
         if(gamepad1.dpad_up && upAndDownLocation < (allParametersStringArray.length - 1))
         {
             upAndDownLocation++;
@@ -981,28 +976,32 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.y)
                 {
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
                     while(gamepad1.y)
                     {
-
+                        
                     }
                 }
                 if(gamepad1.a)
                 {
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 1.0;
                     while(gamepad1.a)
-                    {
-
-                    }
-                }
-                if(gamepad1.x)
-                {
-                    while(gamepad1.x)
                     {
 
                     }
                 }
                 if(gamepad1.b)
                 {
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 0.1;
                     while(gamepad1.b)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 0.1;
+                    while(gamepad1.x)
                     {
 
                     }
@@ -1064,12 +1063,87 @@ public class Autonomous extends DefineEverything {
                 }
                 allParametersStringArray[8] = ((double)currentDelayBeforeShooting / 1000) + "*";
                 break;
-            case 9:
+            case 9;
                 allParametersStringArray[9] = "";
+                if(gamepad1.dpad_left && sideToSideLocation > 0)
+                {
+                    sideToSideLocation--;
+                    if(sideToSideLocation % 2 == 0 && currentMovementsToShoot.get(sideToSideLocation / 2)[0] == 0.0
+                       && currentMovementsToShoot.get(sideToSideLocation / 2)[1] == 0.0)
+                    {
+                        currentMovementsToShoot.remove(sideToSideLocation / 2);
+                    }
+                    while(gamepad1.dpad_left)
+                    {
+
+                    }
+                }
+                if(gamepad1.dpad_right)
+                {
+                    sideToSideLocation++;
+                    if((sideToSideLocation + 1) == (currentMovementsToShoot.size() * 2))
+                    {
+                        fillerDoubleArray[0] = 0.0;
+                        fillerDoubleArray[1] = 0.0;
+                        currentMovementsToShoot.add(fillerDoubleArray);
+                    }
+                    while(gamepad1.dpad_right)
+                    {
+
+                    }
+                }
+                if(gamepad1.y)
+                {
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
+                    while(gamepad1.y)
+                    {
+                        
+                    }
+                }
+                if(gamepad1.a)
+                {
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 1.0;
+                    while(gamepad1.a)
+                    {
+
+                    }
+                }
+                if(gamepad1.b)
+                {
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 0.1;
+                    while(gamepad1.b)
+                    {
+
+                    }
+                }
+                if(gamepad1.x)
+                {
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 0.1;
+                    while(gamepad1.x)
+                    {
+
+                    }
+                }
                 for(int u = 0; u < currentMovementsToShoot.size(); u++)
                 {
-                    allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
-                            currentMovementsToShoot.get(u)[1] + ") ";
+                    if(sideToSideLocation / 2 == u || currentMovementsToShoot.size() == 1)
+                    {
+                        if(sideToSideLocation % 2 == 0)
+                        {
+                            allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "*," +
+                                                       currentMovementsToShoot.get(u)[1] + ") ";
+                        }
+                        else
+                        {
+                            allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
+                                                       currentMovementsToShoot.get(u)[1] + "*) ";
+                        }
+                    }
+                    else
+                    {
+                        allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
+                                                       currentMovementsToShoot.get(u)[1] + ") ";
+                    }
                 }
                 break;
             case 10:
