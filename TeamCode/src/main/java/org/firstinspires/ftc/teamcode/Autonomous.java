@@ -41,7 +41,6 @@ public class Autonomous extends DefineEverything {
     int headerStringArrayLocation = 0;
     int sideToSideLocation = 0;
     int upAndDownLocation = 1;
-    double[] fillerDoubleArray = {0.0, 0.0};
     boolean changedHeader = false;
 
     String[] allParametersStringArray = new String[11]; // Final strings that display
@@ -634,6 +633,7 @@ public class Autonomous extends DefineEverything {
      */
     @Override
     public void init_loop() {
+        // Bumpers change the header and set the pre-set autonomous routines
         if(gamepad1.left_bumper && headerStringArrayLocation > 0)
         {
             headerStringArrayLocation--;
@@ -652,12 +652,14 @@ public class Autonomous extends DefineEverything {
             }
             changedHeader = true;
         }
+
+        // Switch case to change the values if pre-set autonomous
         if(changedHeader)
         {
             switch(headerStringArrayLocation)
             {
                 case 0:
-                    currentAlliance = RED;
+                    currentAlliance = true;
                     currentStartingCoordinates[0] = 2.0;
                     currentStartingCoordinates[1] = 0.36458;
                     currentDelay = 0;
@@ -669,12 +671,11 @@ public class Autonomous extends DefineEverything {
                     currentMovementsForDefense.clear();
                     currentDelayBeforeShooting = 0;
                     currentMovementsToShoot.clear();
-                    fillerDoubleArray[0] = 1.5;
-                    fillerDoubleArray[1] = 3.5;
-                    currentMovementsToShoot.add(fillerDoubleArray);
+                    currentMovementsToShoot.add(new double[]{1.5, 3.5});
                     currentEndOnCornerVortex = false;
+                    break;
                 case 1:
-                    currentAlliance = BLUE;
+                    currentAlliance = false;
                     currentStartingCoordinates[0] = 4.0;
                     currentStartingCoordinates[1] = 0.36458;
                     currentDelay = 0;
@@ -686,12 +687,11 @@ public class Autonomous extends DefineEverything {
                     currentMovementsForDefense.clear();
                     currentDelayBeforeShooting = 0;
                     currentMovementsToShoot.clear();
-                    fillerDoubleArray[0] = 4.5;
-                    fillerDoubleArray[1] = 3.5;
-                    currentMovementsToShoot.add(fillerDoubleArray);
+                    currentMovementsToShoot.add(new double[]{4.5, 3.5});
                     currentEndOnCornerVortex = false;
+                    break;
                 case 2:
-                    currentAlliance = RED;
+                    currentAlliance = true;
                     currentStartingCoordinates[0] = 0.0;
                     currentStartingCoordinates[1] = 0.0;
                     currentDelay = 0;
@@ -704,62 +704,72 @@ public class Autonomous extends DefineEverything {
                     currentDelayBeforeShooting = 0;
                     currentMovementsToShoot.clear();
                     currentEndOnCornerVortex = false;
+                    break;
                 default:
 
             }
-            for(int h = 0; h < allParametersStringArray.length; h++)
-            {
-                allParametersStringArray[h] = "";
-            }
-            allParametersStringArray[0] = currentAlliance + "";
-            allParametersStringArray[1] = currentStartingCoordinates[0] + "," + currentStartingCoordinates[1];
-            allParametersStringArray[2] = ((double)currentDelay / 1000) + "";
-            allParametersStringArray[3] = currentBeaconsToGet[0] + "," + currentBeaconsToGet[1];
-            allParametersStringArray[4]  = currentShootBeforeBeacons + "";
-            allParametersStringArray[5] = currentDefense + "";
-            allParametersStringArray[6] = ((double)currentDelayBeforeDefense / 1000) + "";
-            if(currentMovementsForDefense.size() > 0)
-            {
-                for (int u = 0; u < currentMovementsForDefense.size(); u++)
-                {
-                    allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
-                            currentMovementsForDefense.get(u)[1] + ") ";
-                }
-            }
-            allParametersStringArray[8] = ((double)currentDelayBeforeShooting / 1000) + "";
-            if(currentMovementsToShoot.size() > 0)
-            {
-                for (int u = 0; u < currentMovementsToShoot.size(); u++)
-                {
-                    allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
-                            currentMovementsToShoot.get(u)[1] + ") ";
-                }
-            }
-            allParametersStringArray[10] = currentEndOnCornerVortex + "";
             upAndDownLocation = 0;
             sideToSideLocation = 0;
             changedHeader = false;
         }
-        
-        if(gamepad1.dpad_up && upAndDownLocation < (allParametersStringArray.length - 1))
+
+        // D-pad up and down to change the current value you are changing
+        if(gamepad1.dpad_down && upAndDownLocation < (allParametersStringArray.length - 1))
         {
             upAndDownLocation++;
-            sideToSideLocation = 0;
-            while(gamepad1.dpad_up)
-            {
-
-            }
-        }
-        if(gamepad1.dpad_down && headerStringArrayLocation > 0)
-        {
-            upAndDownLocation--;
             sideToSideLocation = 0;
             while(gamepad1.dpad_down)
             {
 
             }
         }
+        if(gamepad1.dpad_up && upAndDownLocation > 0)
+        {
+            upAndDownLocation--;
+            sideToSideLocation = 0;
+            while(gamepad1.dpad_up)
+            {
 
+            }
+        }
+
+        // Set up all the string to display
+        for(int h = 0; h < allParametersStringArray.length; h++)
+        {
+            allParametersStringArray[h] = "";
+        }
+        allParametersStringArray[0] = currentAlliance + "";
+        allParametersStringArray[1] = currentStartingCoordinates[0] + "," + currentStartingCoordinates[1];
+        allParametersStringArray[2] = ((double)currentDelay / 1000) + "";
+        allParametersStringArray[3] = currentBeaconsToGet[0] + "," + currentBeaconsToGet[1];
+        allParametersStringArray[4]  = currentShootBeforeBeacons + "";
+        allParametersStringArray[5] = currentDefense + "";
+        allParametersStringArray[6] = ((double)currentDelayBeforeDefense / 1000) + "";
+        if(currentMovementsForDefense.size() > 0)
+        {
+            for (int u = 0; u < currentMovementsForDefense.size(); u++)
+            {
+                currentMovementsForDefense.get(u)[0] = (double)Math.round(currentMovementsForDefense.get(u)[0] * 100d) / 100d;
+                currentMovementsForDefense.get(u)[1] = (double)Math.round(currentMovementsForDefense.get(u)[1] * 100d) / 100d;
+                allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
+                        currentMovementsForDefense.get(u)[1] + ") ";
+            }
+        }
+        allParametersStringArray[8] = ((double)currentDelayBeforeShooting / 1000) + "";
+        if(currentMovementsToShoot.size() > 0)
+        {
+            for (int u = 0; u < currentMovementsToShoot.size(); u++)
+            {
+                currentMovementsToShoot.get(u)[0] = (double)Math.round(currentMovementsToShoot.get(u)[0] * 100d) / 100d;
+                currentMovementsToShoot.get(u)[1] = (double)Math.round(currentMovementsToShoot.get(u)[1] * 100d) / 100d;
+                allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
+                        currentMovementsToShoot.get(u)[1] + ") ";
+            }
+        }
+        allParametersStringArray[10] = currentEndOnCornerVortex + "";
+
+        // Switch case to change values based on which value you are on and what buttons you press
+        // Also puts the "*" at the end of the values you are currently editing
         switch(upAndDownLocation)
         {
             case 0:
@@ -961,12 +971,12 @@ public class Autonomous extends DefineEverything {
                 allParametersStringArray[7] = "";
                 if(gamepad1.dpad_left && sideToSideLocation > 0)
                 {
-                    sideToSideLocation--;
                     if(sideToSideLocation % 2 == 0 && currentMovementsForDefense.get(sideToSideLocation / 2)[0] == 0.0
-                       && currentMovementsForDefense.get(sideToSideLocation / 2)[1] == 0.0)
+                            && currentMovementsForDefense.get(sideToSideLocation / 2)[1] == 0.0)
                     {
                         currentMovementsForDefense.remove(sideToSideLocation / 2);
                     }
+                    sideToSideLocation--;
                     while(gamepad1.dpad_left)
                     {
 
@@ -974,13 +984,11 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.dpad_right)
                 {
-                    sideToSideLocation++;
-                    if((sideToSideLocation + 1) == (currentMovementsForDefense.size() * 2))
+                    if(((sideToSideLocation + 1) == ((currentMovementsForDefense.size() * 2))) || currentMovementsForDefense.size() == 0)
                     {
-                        fillerDoubleArray[0] = 0.0;
-                        fillerDoubleArray[1] = 0.0;
-                        currentMovementsForDefense.add(fillerDoubleArray);
+                        currentMovementsForDefense.add(new double[]{0.0, 0.0});
                     }
+                    sideToSideLocation++;
                     while(gamepad1.dpad_right)
                     {
 
@@ -991,7 +999,7 @@ public class Autonomous extends DefineEverything {
                     currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
                     while(gamepad1.y)
                     {
-                        
+
                     }
                 }
                 if(gamepad1.a)
@@ -1081,12 +1089,12 @@ public class Autonomous extends DefineEverything {
                 allParametersStringArray[9] = "";
                 if(gamepad1.dpad_left && sideToSideLocation > 0)
                 {
-                    sideToSideLocation--;
                     if(sideToSideLocation % 2 == 0 && currentMovementsToShoot.get(sideToSideLocation / 2)[0] == 0.0
-                       && currentMovementsToShoot.get(sideToSideLocation / 2)[1] == 0.0)
+                            && currentMovementsToShoot.get(sideToSideLocation / 2)[1] == 0.0)
                     {
                         currentMovementsToShoot.remove(sideToSideLocation / 2);
                     }
+                    sideToSideLocation--;
                     while(gamepad1.dpad_left)
                     {
 
@@ -1094,13 +1102,11 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.dpad_right)
                 {
-                    sideToSideLocation++;
-                    if((sideToSideLocation + 1) == (currentMovementsToShoot.size() * 2))
+                    if(((sideToSideLocation + 1) == ((currentMovementsToShoot.size() * 2))) || currentMovementsToShoot.size() == 0)
                     {
-                        fillerDoubleArray[0] = 0.0;
-                        fillerDoubleArray[1] = 0.0;
-                        currentMovementsToShoot.add(fillerDoubleArray);
+                        currentMovementsToShoot.add(new double[]{0.0, 0.0});
                     }
+                    sideToSideLocation++;
                     while(gamepad1.dpad_right)
                     {
 
@@ -1108,15 +1114,15 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.y)
                 {
-                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 1.0;
                     while(gamepad1.y)
                     {
-                        
+
                     }
                 }
                 if(gamepad1.a)
                 {
-                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 1.0;
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 1.0;
                     while(gamepad1.a)
                     {
 
@@ -1124,7 +1130,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.b)
                 {
-                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 0.1;
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 0.1;
                     while(gamepad1.b)
                     {
 
@@ -1132,7 +1138,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.x)
                 {
-                    currentMovementsToShoot.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 0.1;
+                    currentMovementsToShoot.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 0.1;
                     while(gamepad1.x)
                     {
 
@@ -1142,7 +1148,7 @@ public class Autonomous extends DefineEverything {
                 {
                     for (int u = 0; u < currentMovementsToShoot.size(); u++)
                     {
-                        if (sideToSideLocation / 2 == u || currentMovementsToShoot.size() == 1)
+                        if (sideToSideLocation / 2 == u)
                         {
                             if (sideToSideLocation % 2 == 0)
                             {
@@ -1180,7 +1186,7 @@ public class Autonomous extends DefineEverything {
 
         // Display the current autonomous configuration
         telemetry.addData("Pre-Set Autonomous ", headerStringArray[headerStringArrayLocation]);
-        telemetry.addData("Alliance ", allParametersStringArray[0]);
+        telemetry.addData("Red Alliance ", allParametersStringArray[0]);
         telemetry.addData("Starting Coordinates ", allParametersStringArray[1]);
         telemetry.addData("Delay ", allParametersStringArray[2]);
         telemetry.addData("Beacons To Get ", allParametersStringArray[3]);
@@ -1202,13 +1208,13 @@ public class Autonomous extends DefineEverything {
         // Start the autonomous thread only once
         if(val == (int)NOTHING)
         {
-            Autonomous.start();
+            //Autonomous.start();
             val++;
         }
 
         // Run the motors at the speeds defined by the autonomous thread
-        runLeftWheels(leftWheelSpeed);
-        runRightWheels(rightWheelSpeed);
+        //runLeftWheels(leftWheelSpeed);
+        //runRightWheels(rightWheelSpeed);
     }
 
 }

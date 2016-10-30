@@ -20,7 +20,9 @@ public class ExampleTeleOp extends OpMode {
     double flywheelSpeed = 0.0;
     double targetFlywheelSpeed = 0.0;
     long timerVar = 0;
-    double backIntakeSpeed = 0.0;
+    double backIntakeSpeed = 0.5;
+    double backFrontIntakeSpeed = 0.5;
+    double frontFrontIntakeSpeed = 0.5;
 
     DcMotor FRW; // Drive
     DcMotor BRW;
@@ -34,6 +36,8 @@ public class ExampleTeleOp extends OpMode {
 
     //Servo FI;
     Servo BI;
+    Servo FFI;
+    Servo BFI;
 
 
 
@@ -56,6 +60,8 @@ public class ExampleTeleOp extends OpMode {
 
         //FI = hardwareMap.servo.get("FI");
         BI = hardwareMap.servo.get("BI");
+        BFI = hardwareMap.servo.get("BFI");
+        FFI = hardwareMap.servo.get("FFI");
 
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -106,11 +112,7 @@ public class ExampleTeleOp extends OpMode {
 
         runFlywheels(flywheelSpeed);
 
-        if(gamepad1.left_bumper)
-        {
-            backIntakeSpeed = 0.9;
-        }
-        else if(gamepad1.left_trigger > 0)
+        if(targetFlywheelSpeed > 0.0 && (flywheelSpeed > (targetFlywheelSpeed - 0.01)) && (flywheelSpeed < (targetFlywheelSpeed + 0.01)))
         {
             backIntakeSpeed = 0.1;
         }
@@ -119,7 +121,25 @@ public class ExampleTeleOp extends OpMode {
             backIntakeSpeed = 0.5;
         }
 
+        if(gamepad1.left_bumper)
+        {
+            backFrontIntakeSpeed = 0.01;
+            frontFrontIntakeSpeed = 0.01;
+        }
+        else if(gamepad1.left_trigger > 0)
+        {
+            backFrontIntakeSpeed = 0.99;
+            frontFrontIntakeSpeed = 0.99;
+        }
+        else
+        {
+            backFrontIntakeSpeed = 0.5;
+            frontFrontIntakeSpeed = 0.5;
+        }
+
         BI.setPosition(backIntakeSpeed);
+        BFI.setPosition(backFrontIntakeSpeed);
+        FFI.setPosition(frontFrontIntakeSpeed);
 
         if(gamepad1.a)
         {
@@ -140,6 +160,9 @@ public class ExampleTeleOp extends OpMode {
         telemetry.addData("Right Speed ", rightSpeed);
         telemetry.addData("Left Speed ", leftSpeed);
         telemetry.addData("Flywheel Speed", flywheelSpeed);
+        telemetry.addData("Back Intake", backIntakeSpeed);
+        telemetry.addData("Back Front Intake", backFrontIntakeSpeed);
+        telemetry.addData("Front Front Intake", frontFrontIntakeSpeed);
     }
 
     /*
