@@ -22,6 +22,13 @@ public class Autonomous extends DefineEverything {
     // Speeds of the motors to be changed by autonomous thread
     double rightWheelSpeed = STOP_MOTOR_SPEED;
     double leftWheelSpeed = STOP_MOTOR_SPEED;
+    double flywheelSpeed = STOP_MOTOR_SPEED;
+    double targetFlywheelSpeed = STOP_MOTOR_SPEED;
+    double frontIntakesSpeed = 0.5;
+    double backIntakeSpeed = 0.5;
+    double beaconPusherSpeed = 0.5;
+    long timerVar = 0;
+    int beaconPusherPosition = 1;
 
     // Autonomous variables to change in init loop
     boolean currentAlliance = BLUE;
@@ -230,31 +237,31 @@ public class Autonomous extends DefineEverything {
     {
         // Set up all variables
         int difference = Math.abs(gyro.getIntegratedZValue() - targetPosition);
-        int directionvalue = -GYRO_STEP_VALUE;
+        int directionValue = -GYRO_STEP_VALUE;
         if(gyro.getIntegratedZValue() < targetPosition)
-            directionvalue = GYRO_STEP_VALUE;
+            directionValue = GYRO_STEP_VALUE;
         int oneStepTotal = (GYRO_STEP_VALUE + GYRO_STEP_VALUE);
         int degreesToGoMaxSpeed = (oneStepTotal * GYRO_RAMP_STEPS);
         double oneStepSpeedDifference = ((GYRO_TURN_MAX_SPEED - RAMP_UP_START_SPEED) / GYRO_RAMP_STEPS);
         int currentValueToTurnTo = gyro.getIntegratedZValue();
-        int signOfDirection = (directionvalue / Math.abs(directionvalue));
+        int signOfDirection = (directionValue / Math.abs(directionValue));
 
         // Ramp up and down based on how many degrees to turn
-        for(int checkdifference = (int)NOTHING; checkdifference <= (GYRO_RAMP_STEPS); checkdifference++)
+        for(int checkDifference = (int)NOTHING; checkDifference <= (GYRO_RAMP_STEPS); checkDifference++)
         {
-            if(difference > (degreesToGoMaxSpeed - (oneStepTotal * checkdifference)))
+            if(difference > (degreesToGoMaxSpeed - (oneStepTotal * checkDifference)))
             {
-                for(int turnstep = (int)NOTHING; turnstep < (GYRO_RAMP_STEPS - checkdifference); turnstep++)
+                for(int turnStep = (int)NOTHING; turnStep < (GYRO_RAMP_STEPS - checkDifference); turnStep++)
                 {
-                    currentValueToTurnTo += (directionvalue - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
-                    gyroTurns(((RAMP_UP_START_SPEED + (oneStepSpeedDifference * turnstep))), currentValueToTurnTo);
+                    currentValueToTurnTo += (directionValue - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
+                    gyroTurns(((RAMP_UP_START_SPEED + (oneStepSpeedDifference * turnStep))), currentValueToTurnTo);
                 }
-                currentValueToTurnTo += (((difference - (degreesToGoMaxSpeed - (oneStepTotal * checkdifference))) * signOfDirection) - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
-                gyroTurns((GYRO_TURN_MAX_SPEED - (oneStepSpeedDifference * checkdifference)), currentValueToTurnTo);
-                for(int turnstep = checkdifference; turnstep < GYRO_RAMP_STEPS; turnstep++)
+                currentValueToTurnTo += (((difference - (degreesToGoMaxSpeed - (oneStepTotal * checkDifference))) * signOfDirection) - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
+                gyroTurns((GYRO_TURN_MAX_SPEED - (oneStepSpeedDifference * checkDifference)), currentValueToTurnTo);
+                for(int turnStep = checkDifference; turnStep < GYRO_RAMP_STEPS; turnStep++)
                 {
-                    currentValueToTurnTo += (directionvalue - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
-                    gyroTurns((GYRO_TURN_MAX_SPEED - (oneStepSpeedDifference * (turnstep++))), currentValueToTurnTo);
+                    currentValueToTurnTo += (directionValue - (SINGLE_STEP_OVERTURN_ADJUSTMENT * signOfDirection));
+                    gyroTurns((GYRO_TURN_MAX_SPEED - (oneStepSpeedDifference * (turnStep++))), currentValueToTurnTo);
                 }
                 break;
             }
@@ -301,6 +308,53 @@ public class Autonomous extends DefineEverything {
     void turnRedBlue(double speed, int targetPosition, boolean alliance)
     {
 
+    }
+
+    /*
+     * putBeaconPusherInPosition - Puts the beacon pusher in the desired position
+     * @param int position - The position to run to, 1-3
+     */
+    void putBeaconPusherInPosition(int position)
+    {
+        if(position != beaconPusherPosition)
+        {
+            if(beaconPusherPosition == 1)
+            {
+                beaconPusherSpeed = 0.99;
+                doDaSleep(500);
+                if(position == 3)
+                {
+                    doDaSleep(100);
+                }
+                beaconPusherSpeed = 0.5;
+            }
+            else if(beaconPusherPosition == 2)
+            {
+                if(position == 1)
+                {
+                    beaconPusherSpeed = 0.01;
+                    doDaSleep(500);
+                    beaconPusherSpeed = 0.5;
+                }
+                else
+                {
+                    beaconPusherSpeed = 0.99;
+                    doDaSleep(100);
+                    beaconPusherSpeed = 0.5;
+                }
+            }
+            else
+            {
+                beaconPusherSpeed = 0.01;
+                doDaSleep(100);
+                if(position == 1)
+                {
+                    doDaSleep(500);
+                }
+                beaconPusherSpeed = 0.5;
+            }
+        }
+        beaconPusherPosition = position;
     }
 
     /*
@@ -463,16 +517,25 @@ public class Autonomous extends DefineEverything {
             {
                 rampTurnGyro(angleToTurnToLocation(3.5, 2.5));
             }
-            // Target Flywheel speed = speed to launch at
-            // While speed is not equal sleep 10
-            // Run intake to shoot balls
-            // Target Flywheel speed = 0.0;
-            // While speed is not 0 sleep 10
+
+            // Run flywheel and shoot
+            targetFlywheelSpeed = 0.3;
+            while(targetFlywheelSpeed != flywheelSpeed)
+            {
+                doDaSleep(10);
+            }
+            frontIntakesSpeed = 0.99;
+            doDaSleep(2000);
+            frontIntakesSpeed = 0.5;
+            targetFlywheelSpeed = 0.0;
+            while(targetFlywheelSpeed != flywheelSpeed)
+            {
+                doDaSleep(10);
+            }
         }
 
         if(beaconsToGet[0])
         {
-             // 0.02083333
             if(alliance == RED)
             {
                 positionRedBlue(5.5, 2.6454, alliance);
@@ -483,10 +546,12 @@ public class Autonomous extends DefineEverything {
                 positionRedBlue(5.5, 2.1038, alliance);
                 rampTurnGyro(0);
             }
-            // Run beacon pusher Vex motor out to sensing position
+            putBeaconPusherInPosition(2);
             if(isColorRed() == alliance)
             {
-                // Push button and retract to sensing position
+                putBeaconPusherInPosition(3);
+                doDaSleep(200);
+                putBeaconPusherInPosition(2);
             }
             else
             {
@@ -494,7 +559,9 @@ public class Autonomous extends DefineEverything {
                     positionRedBlue(5.5, 2.8962, alliance);
                 else
                     positionRedBlue(5.5, 2.3546, alliance);
-                // Push button and retract to sensing position
+                putBeaconPusherInPosition(3);
+                doDaSleep(200);
+                putBeaconPusherInPosition(2);
             }
         }
         else if(beaconsToGet[1])
@@ -514,10 +581,12 @@ public class Autonomous extends DefineEverything {
                 positionRedBlue(5.5, 4.1038, alliance);
                 rampTurnGyro(0);
             }
-            // Run beacon pusher Vex motor out to sensing position
+            putBeaconPusherInPosition(2);
             if(isColorRed() == alliance)
             {
-                // Push button and retract to sensing position
+                putBeaconPusherInPosition(3);
+                doDaSleep(200);
+                putBeaconPusherInPosition(2);
             }
             else
             {
@@ -525,7 +594,9 @@ public class Autonomous extends DefineEverything {
                     positionRedBlue(5.5, 4.8962, alliance);
                 else
                     positionRedBlue(5.5, 4.3546, alliance);
-                // Push button and retract to sensing position
+                putBeaconPusherInPosition(3);
+                doDaSleep(200);
+                putBeaconPusherInPosition(2);
             }
         }
 
@@ -546,11 +617,21 @@ public class Autonomous extends DefineEverything {
             {
                 rampTurnGyro(angleToTurnToLocation(3.5, 2.5));
             }
-            // Target Flywheel speed = speed to launch at
-            // While speed is not equal sleep 10
-            // Run intake to shoot balls
-            // Target Flywheel speed = 0.0;
-            // While speed is not 0 sleep 10
+
+            // Run flywheel and shoot
+            targetFlywheelSpeed = 0.3;
+            while(targetFlywheelSpeed != flywheelSpeed)
+            {
+                doDaSleep(10);
+            }
+            frontIntakesSpeed = 0.99;
+            doDaSleep(2000);
+            frontIntakesSpeed = 0.5;
+            targetFlywheelSpeed = 0.0;
+            while(targetFlywheelSpeed != flywheelSpeed)
+            {
+                doDaSleep(10);
+            }
         }
 
         if(defense)
@@ -586,6 +667,10 @@ public class Autonomous extends DefineEverything {
             // At the end of the autonomous routine stop motors
             rightWheelSpeed = STOP_MOTOR_SPEED;
             leftWheelSpeed = STOP_MOTOR_SPEED;
+            flywheelSpeed = STOP_MOTOR_SPEED;
+            frontIntakesSpeed = 0.5;
+            backIntakeSpeed = 0.5;
+            beaconPusherSpeed = 0.5;
         }
     };
 
@@ -610,6 +695,12 @@ public class Autonomous extends DefineEverything {
         ULFW = hardwareMap.dcMotor.get("ULFW");
         LLFW = hardwareMap.dcMotor.get("LLFW");
 
+        BI = hardwareMap.servo.get("BI"); // Intakes
+        BFI = hardwareMap.servo.get("BFI");
+        FFI = hardwareMap.servo.get("FFI");
+
+        BP = hardwareMap.servo.get("BP"); // Beacon Pusher
+
         // Map Sensors
         color = hardwareMap.colorSensor.get("color");
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
@@ -617,6 +708,10 @@ public class Autonomous extends DefineEverything {
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
         FLW.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // Reverse Flywheels
+        ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
+        LRFW.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Initialize all values of the parameters string array
         for(int h = 0; h < allParametersStringArray.length; h++)
@@ -987,8 +1082,12 @@ public class Autonomous extends DefineEverything {
                     if(((sideToSideLocation + 1) == ((currentMovementsForDefense.size() * 2))) || currentMovementsForDefense.size() == 0)
                     {
                         currentMovementsForDefense.add(new double[]{0.0, 0.0});
+                        sideToSideLocation = ((currentMovementsForDefense.size() * 2) - 2);
                     }
-                    sideToSideLocation++;
+                    else
+                    {
+                        sideToSideLocation++;
+                    }
                     while(gamepad1.dpad_right)
                     {
 
@@ -996,7 +1095,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.y)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 1.0;
                     while(gamepad1.y)
                     {
 
@@ -1004,7 +1103,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.a)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 1.0;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 1.0;
                     while(gamepad1.a)
                     {
 
@@ -1012,7 +1111,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.b)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 0.1;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 0.1;
                     while(gamepad1.b)
                     {
 
@@ -1020,7 +1119,7 @@ public class Autonomous extends DefineEverything {
                 }
                 if(gamepad1.x)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 0.1;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 0.1;
                     while(gamepad1.x)
                     {
 
@@ -1212,9 +1311,30 @@ public class Autonomous extends DefineEverything {
             val++;
         }
 
+        // Ramp the flywheel up and down
+        if(targetFlywheelSpeed != flywheelSpeed && (timerVar == 0 || System.currentTimeMillis() > (timerVar + 30)))
+        {
+            flywheelSpeed += (((targetFlywheelSpeed - flywheelSpeed) / (Math.abs(targetFlywheelSpeed - flywheelSpeed))) * 0.01);
+            timerVar = System.currentTimeMillis();
+        } else
+        {
+            timerVar = 0;
+        }
+
+        if(targetFlywheelSpeed > 0.0 && (flywheelSpeed > (targetFlywheelSpeed - 0.01)) && (flywheelSpeed < (targetFlywheelSpeed + 0.01))) {
+            backIntakeSpeed = 0.1;
+        } else
+        {
+            backIntakeSpeed = 0.5;
+        }
+
         // Run the motors at the speeds defined by the autonomous thread
-        //runLeftWheels(leftWheelSpeed);
-        //runRightWheels(rightWheelSpeed);
+        runLeftWheels(leftWheelSpeed);
+        runRightWheels(rightWheelSpeed);
+        runFlywheel(flywheelSpeed);
+        runFrontIntakes(frontIntakesSpeed);
+        BI.setPosition(backIntakeSpeed);
+        BP.setPosition(beaconPusherSpeed);
     }
 
 }

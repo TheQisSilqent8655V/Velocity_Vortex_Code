@@ -52,6 +52,7 @@ public class Nothing extends OpMode{
      */
     @Override
     public void init_loop() {
+        // Bumpers change the header and set the pre-set autonomous routines
         if(gamepad1.left_bumper && headerStringArrayLocation > 0)
         {
             headerStringArrayLocation--;
@@ -70,6 +71,8 @@ public class Nothing extends OpMode{
             }
             changedHeader = true;
         }
+
+        // Switch case to change the values if pre-set autonomous
         if(changedHeader)
         {
             switch(headerStringArrayLocation)
@@ -129,6 +132,7 @@ public class Nothing extends OpMode{
             changedHeader = false;
         }
 
+        // D-pad up and down to change the current value you are changing
         if(gamepad1.dpad_down && upAndDownLocation < (allParametersStringArray.length - 1))
         {
             upAndDownLocation++;
@@ -148,6 +152,7 @@ public class Nothing extends OpMode{
             }
         }
 
+        // Set up all the string to display
         for(int h = 0; h < allParametersStringArray.length; h++)
         {
             allParametersStringArray[h] = "";
@@ -163,6 +168,8 @@ public class Nothing extends OpMode{
         {
             for (int u = 0; u < currentMovementsForDefense.size(); u++)
             {
+                currentMovementsForDefense.get(u)[0] = (double)Math.round(currentMovementsForDefense.get(u)[0] * 100d) / 100d;
+                currentMovementsForDefense.get(u)[1] = (double)Math.round(currentMovementsForDefense.get(u)[1] * 100d) / 100d;
                 allParametersStringArray[7] += "(" + currentMovementsForDefense.get(u)[0] + "," +
                         currentMovementsForDefense.get(u)[1] + ") ";
             }
@@ -172,12 +179,16 @@ public class Nothing extends OpMode{
         {
             for (int u = 0; u < currentMovementsToShoot.size(); u++)
             {
+                currentMovementsToShoot.get(u)[0] = (double)Math.round(currentMovementsToShoot.get(u)[0] * 100d) / 100d;
+                currentMovementsToShoot.get(u)[1] = (double)Math.round(currentMovementsToShoot.get(u)[1] * 100d) / 100d;
                 allParametersStringArray[9] += "(" + currentMovementsToShoot.get(u)[0] + "," +
                         currentMovementsToShoot.get(u)[1] + ") ";
             }
         }
         allParametersStringArray[10] = currentEndOnCornerVortex + "";
 
+        // Switch case to change values based on which value you are on and what buttons you press
+        // Also puts the "*" at the end of the values you are currently editing
         switch(upAndDownLocation)
         {
             case 0:
@@ -392,11 +403,15 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.dpad_right)
                 {
-                    if((sideToSideLocation + 1) == ((currentMovementsForDefense.size() * 2)))
+                    if(((sideToSideLocation + 1) == ((currentMovementsForDefense.size() * 2))) || currentMovementsForDefense.size() == 0)
                     {
                         currentMovementsForDefense.add(new double[]{0.0, 0.0});
+                        sideToSideLocation = ((currentMovementsForDefense.size() * 2) - 2);
                     }
-                    sideToSideLocation++;
+                    else
+                    {
+                        sideToSideLocation++;
+                    }
                     while(gamepad1.dpad_right)
                     {
 
@@ -404,7 +419,7 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.y)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 1.0;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 1.0;
                     while(gamepad1.y)
                     {
 
@@ -412,7 +427,7 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.a)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 1.0;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 1.0;
                     while(gamepad1.a)
                     {
 
@@ -420,7 +435,7 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.b)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] -= 0.1;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] -= 0.1;
                     while(gamepad1.b)
                     {
 
@@ -428,7 +443,7 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.x)
                 {
-                    currentMovementsForDefense.get((sideToSideLocation / 2))[((sideToSideLocation / 2) - (sideToSideLocation % 2))] += 0.1;
+                    currentMovementsForDefense.get((sideToSideLocation / 2))[(sideToSideLocation % 2)] += 0.1;
                     while(gamepad1.x)
                     {
 
@@ -510,7 +525,7 @@ public class Nothing extends OpMode{
                 }
                 if(gamepad1.dpad_right)
                 {
-                    if((sideToSideLocation + 1) == (currentMovementsToShoot.size() * 2))
+                    if(((sideToSideLocation + 1) == ((currentMovementsToShoot.size() * 2))) || currentMovementsToShoot.size() == 0)
                     {
                         currentMovementsToShoot.add(new double[]{0.0, 0.0});
                     }
@@ -605,9 +620,6 @@ public class Nothing extends OpMode{
         telemetry.addData("Delay Before Shooting ", allParametersStringArray[8]);
         telemetry.addData("Movements To Shoot ", allParametersStringArray[9]);
         telemetry.addData("End on Corner Vortex", allParametersStringArray[10]);
-        telemetry.addData("Side to Side", sideToSideLocation);
-        telemetry.addData("Up and down", upAndDownLocation);
-        telemetry.addData("Movements to shoot size", currentMovementsToShoot.size());
     }
 
     /*

@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.LightSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -26,7 +27,10 @@ public class DefineEverything extends OpMode {
     DcMotor LLFW;
 
     // Define Servos
-
+    Servo BI;
+    Servo FFI;
+    Servo BFI;
+    Servo BP;
 
     // Define Sensors
     ColorSensor color;
@@ -42,8 +46,8 @@ public class DefineEverything extends OpMode {
     final int BACKWARD = -1; // General
     final int FORWARD = 1;
     final int OVERRUN_CORRECTION_WAIT_TIME = 200;
-    final double MINIMUM_WHEEL_POWER_TO_MOVE = 0.4;
-    final double RAMP_UP_START_SPEED = 0.5;
+    final double MINIMUM_WHEEL_POWER_TO_MOVE = 0.3;
+    final double RAMP_UP_START_SPEED = 0.3;
     final int TICKS_PER_WHEEL_MOTOR_ROTATION = 1120;
     final double WHEEL_GEAR_RATIO = 4;
     final double WHEEL_DIAMETER = 4;
@@ -57,13 +61,13 @@ public class DefineEverything extends OpMode {
     final int DIFFERENCE_IN_WHEEL_ENCODER_THRESHOLD = 50; // Basic encoder drives
     final double ENCODER_DRIVE_STRAIGHT_CORRECTION = 0.9;
 
-    final int RAMP_DOWN_ENCODER_STEP = 200; // Ramp encoder drive
+    final int RAMP_DOWN_ENCODER_STEP = 600; // Ramp encoder drive
     final int RAMP_ENCODER_STEPS = 3;
-    final int RAMP_UP_ENCODER_STEP = 100;
-    final int SINGLE_STEP_OVERRUN_ADJUSTMENT = 5;
+    final int RAMP_UP_ENCODER_STEP = 300;
+    final int SINGLE_STEP_OVERRUN_ADJUSTMENT = 10;
 
     final int GYRO_RAMP_STEPS = 2; // Ramp gyro turning
-    final int GYRO_STEP_VALUE = 15;
+    final int GYRO_STEP_VALUE = 25;
     final int SINGLE_STEP_OVERTURN_ADJUSTMENT = 5;
     final double GYRO_TURN_MAX_SPEED = 0.8;
 
@@ -87,6 +91,12 @@ public class DefineEverything extends OpMode {
         ULFW = hardwareMap.dcMotor.get("ULFW");
         LLFW = hardwareMap.dcMotor.get("LLFW");
 
+        BI = hardwareMap.servo.get("BI"); // Intakes
+        BFI = hardwareMap.servo.get("BFI");
+        FFI = hardwareMap.servo.get("FFI");
+
+        BP = hardwareMap.servo.get("BP"); // Beacon Pusher
+
         // Map Sensors
         color = hardwareMap.colorSensor.get("color");
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
@@ -94,6 +104,10 @@ public class DefineEverything extends OpMode {
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
         FLW.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // Reverse Flywheels
+        ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
+        LRFW.setDirection(DcMotorSimple.Direction.REVERSE);
 
     }
 
@@ -128,13 +142,37 @@ public class DefineEverything extends OpMode {
 
     /*
      * runLeftWheels - Function to run the left drive wheels
-     * @param double speed - the speed
+     * @param double speed - the power to run at
      */
     void runLeftWheels(double speed)
     {
         speed = Range.clip(speed, -MINIMUM_MOTOR_SPEED, MAXIMUM_MOTOR_SPEED);
         FLW.setPower(speed);
         BLW.setPower(speed);
+    }
+
+    /*
+     * runFlywheel - Function to run the flywheel
+     * @param double speed - the power to run at
+     */
+    void runFlywheel(double speed)
+    {
+        speed = Range.clip(speed, -1.0, 1.0);
+        ULFW.setPower(speed);
+        URFW.setPower(speed);
+        LLFW.setPower(speed);
+        LRFW.setPower(speed);
+    }
+
+    /*
+     * runFrontIntakes - Function to run both front intakes
+     * @param double speed - power to run at, 0.01 for backwards, 0.99 for forwards, 0.5 for stop
+     */
+    void runFrontIntakes(double speed)
+    {
+        speed = Range.clip(speed, 0.01, 0.99);
+        BFI.setPosition(speed);
+        FFI.setPosition(speed);
     }
 
 
