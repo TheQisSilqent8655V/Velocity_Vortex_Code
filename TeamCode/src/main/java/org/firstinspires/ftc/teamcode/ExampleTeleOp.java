@@ -23,6 +23,8 @@ public class ExampleTeleOp extends OpMode {
     double backIntakeSpeed = 0.5;
     double backFrontIntakeSpeed = 0.5;
     double frontFrontIntakeSpeed = 0.5;
+    double beaconPusherSpeed = 0.5;
+    boolean changeSpeed = false;
 
     DcMotor FRW; // Drive
     DcMotor BRW;
@@ -38,6 +40,7 @@ public class ExampleTeleOp extends OpMode {
     Servo BI;
     Servo FFI;
     Servo BFI;
+    Servo BP;
 
 
 
@@ -62,6 +65,7 @@ public class ExampleTeleOp extends OpMode {
         BI = hardwareMap.servo.get("BI");
         BFI = hardwareMap.servo.get("BFI");
         FFI = hardwareMap.servo.get("FFI");
+        BP = hardwareMap.servo.get("BP");
 
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -112,9 +116,13 @@ public class ExampleTeleOp extends OpMode {
 
         runFlywheels(flywheelSpeed);
 
-        if(targetFlywheelSpeed > 0.0 && (flywheelSpeed > (targetFlywheelSpeed - 0.01)) && (flywheelSpeed < (targetFlywheelSpeed + 0.01)))
+        if(gamepad1.dpad_up)
         {
             backIntakeSpeed = 0.1;
+        }
+        else if(gamepad1.dpad_down)
+        {
+            backIntakeSpeed = 0.9;
         }
         else
         {
@@ -137,25 +145,45 @@ public class ExampleTeleOp extends OpMode {
             frontFrontIntakeSpeed = 0.5;
         }
 
+        if(gamepad1.dpad_left)
+        {
+            beaconPusherSpeed = 0.01;
+        }
+        else if(gamepad1.dpad_right)
+        {
+            beaconPusherSpeed = 0.99;
+        }
+        else
+        {
+            beaconPusherSpeed = 0.5;
+        }
+
         BI.setPosition(backIntakeSpeed);
         BFI.setPosition(backFrontIntakeSpeed);
         FFI.setPosition(frontFrontIntakeSpeed);
+        BP.setPosition(beaconPusherSpeed);
 
         if(gamepad1.a)
         {
             targetFlywheelSpeed = 0.0;
         }
-        else if(gamepad1.b)
+        else if(gamepad1.b && (changeSpeed == false))
         {
-            targetFlywheelSpeed = 0.6;
+            targetFlywheelSpeed += 0.01;
+            changeSpeed = true;
         }
-        else if(gamepad1.x)
+        else if(gamepad1.x && (changeSpeed == false))
         {
-            targetFlywheelSpeed = 0.8;
+            targetFlywheelSpeed -= 0.01;
+            changeSpeed = true;
         }
         else if(gamepad1.y)
         {
-            targetFlywheelSpeed = 1.0;
+            targetFlywheelSpeed = 0.25;
+        }
+        else
+        {
+            changeSpeed = false;
         }
         telemetry.addData("Right Speed ", rightSpeed);
         telemetry.addData("Left Speed ", leftSpeed);
@@ -163,6 +191,7 @@ public class ExampleTeleOp extends OpMode {
         telemetry.addData("Back Intake", backIntakeSpeed);
         telemetry.addData("Back Front Intake", backFrontIntakeSpeed);
         telemetry.addData("Front Front Intake", frontFrontIntakeSpeed);
+        telemetry.addData("Beacon Pusher Speed", beaconPusherSpeed);
     }
 
     /*

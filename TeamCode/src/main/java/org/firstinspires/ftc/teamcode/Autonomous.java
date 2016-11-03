@@ -267,7 +267,7 @@ public class Autonomous extends DefineEverything {
             }
         }
 
-        // This is the turning code that works but is kinda ugly
+        // This is the turning code that works but is kinda ugly and not easy to modify
         // Still here and not in oldCode because the above code is not tested yet
         /*if(difference > 60)
         {
@@ -388,11 +388,11 @@ public class Autonomous extends DefineEverything {
     {
         double dX = Math.abs(currentX - x);
         double dY = Math.abs(currentY - y);
-        double hypotenuse = (Math.sqrt((Math.pow(dX, POWER_OF_TWO)) + (Math.pow(dY, POWER_OF_TWO))));
+        double hypotenuse = (Math.sqrt((Math.pow(dX, 2)) + (Math.pow(dY, 2))));
         double angle = Math.toDegrees(Math.asin(((dX) / (hypotenuse))));
         if(currentY > 2.5)
         {
-            angle = STRAIGHT_ANGLE - angle;
+            angle = 180 - angle;
         }
         if(currentX < 2.5)
         {
@@ -407,7 +407,7 @@ public class Autonomous extends DefineEverything {
      *                  left corner from where you start and the middle of the robot
      *                  being the point
      *                  1 value for X or Y is 1 tile
-     *                  MoveToPosition(1.5, .75) moves to 1.5 tiles up and .75 tiles to the
+     *                  moveToPosition(1.5, .75) moves to 1.5 tiles up and .75 tiles to the
      *                  right of the origin
      * @param double x - The X coordinate to move to
      * @param double y - The Y coordinate to move to
@@ -536,14 +536,15 @@ public class Autonomous extends DefineEverything {
 
         if(beaconsToGet[0])
         {
+            //0.02083333
             if(alliance == RED)
             {
-                positionRedBlue(5.5, 2.6454, alliance);
+                positionRedBlue(5.5, 2.62, alliance);
                 rampTurnGyro(180);
             }
             else
             {
-                positionRedBlue(5.5, 2.1038, alliance);
+                positionRedBlue(5.5, 2.12, alliance);
                 rampTurnGyro(0);
             }
             putBeaconPusherInPosition(2);
@@ -556,9 +557,9 @@ public class Autonomous extends DefineEverything {
             else
             {
                 if(alliance == RED)
-                    positionRedBlue(5.5, 2.8962, alliance);
+                    positionRedBlue(5.5, 2.875, alliance);
                 else
-                    positionRedBlue(5.5, 2.3546, alliance);
+                    positionRedBlue(5.5, 2.37, alliance);
                 putBeaconPusherInPosition(3);
                 doDaSleep(200);
                 putBeaconPusherInPosition(2);
@@ -573,12 +574,12 @@ public class Autonomous extends DefineEverything {
         {
             if(alliance == RED)
             {
-                positionRedBlue(5.5, 4.6454, alliance);
+                positionRedBlue(5.5, 4.62, alliance);
                 rampTurnGyro(180);
             }
             else
             {
-                positionRedBlue(5.5, 4.1038, alliance);
+                positionRedBlue(5.5, 4.12, alliance);
                 rampTurnGyro(0);
             }
             putBeaconPusherInPosition(2);
@@ -591,9 +592,9 @@ public class Autonomous extends DefineEverything {
             else
             {
                 if(alliance == RED)
-                    positionRedBlue(5.5, 4.8962, alliance);
+                    positionRedBlue(5.5, 4.875, alliance);
                 else
-                    positionRedBlue(5.5, 4.3546, alliance);
+                    positionRedBlue(5.5, 4.37, alliance);
                 putBeaconPusherInPosition(3);
                 doDaSleep(200);
                 putBeaconPusherInPosition(2);
