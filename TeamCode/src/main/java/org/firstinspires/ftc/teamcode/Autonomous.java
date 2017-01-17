@@ -4,7 +4,6 @@ import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.util.Range;
 
 import java.util.ArrayList;
 
@@ -12,7 +11,7 @@ import java.util.ArrayList;
  * Created by Conno on 9/22/2016.
  */
 
-@TeleOp(name = "Initialize and Get Heading", group = "Autonomous Tests")
+@TeleOp(name = "All Autonomous", group = "Autonomous Tests")
 public class Autonomous extends DefineEverything {
 
     // X and Y positions of robot
@@ -38,10 +37,13 @@ public class Autonomous extends DefineEverything {
     boolean currentShootBeforeBeacons = false;
     boolean currentDefense = false;
     int currentDelayBeforeDefense = 0;
-    ArrayList<double[]> currentMovementsForDefense;
+    ArrayList<double[]> currentMovementsForDefense = new ArrayList<>();
     int currentDelayBeforeShooting = 0;
-    ArrayList<double[]> currentMovementsToShoot;
+    ArrayList<double[]> currentMovementsToShoot = new ArrayList<>();
     boolean currentEndOnCornerVortex = false;
+    boolean currentSlowAutonomous = false;
+
+    double leftWheelMultiplier = 1.18;
 
     // Variables for displaying information in init loop
     String[] headerStringArray = {"Red 2 Beacon Shoot Basic", "Blue 2 Beacon Shoot Basic", "Custom"}; // Variables that change with buttons
@@ -50,10 +52,13 @@ public class Autonomous extends DefineEverything {
     int upAndDownLocation = 1;
     boolean changedHeader = false;
 
-    String[] allParametersStringArray = new String[11]; // Final strings that display
+    String[] allParametersStringArray = new String[12]; // Final strings that display
 
     // Variable for starting the autonomous thread
     int val = (int)NOTHING;
+    long timerVar2 = 0;
+    boolean donePushing = false;
+    double leftSpeedMultiplier = 1.6;
 
     /*
      * initializeAllSensorsSlashEncoders - Function to reset and initialize all da stuff
@@ -62,12 +67,14 @@ public class Autonomous extends DefineEverything {
         // Initialize encoders
         rightEncoderMotor().setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftEncoderMotor().setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        URFW.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         doDaSleep(ENCODER_CALIBRATION_WAIT_TIME);
         rightEncoderMotor().setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftEncoderMotor().setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftEncoderMotor().setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        URFW.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Initialize color
-        color.enableLed(true);
+        color.enableLed(false);
 
         // Calibrate gyro
         gyro.calibrate();
@@ -76,6 +83,38 @@ public class Autonomous extends DefineEverything {
             doDaSleep(GYRO_CALIBRATION_WAIT_TIME);
         }
     }
+
+
+    int flywheelEncoderSpeed = 0;
+    int fillerval = 0;
+    boolean keepRunning = true;
+
+    Runnable FlywheelSpeedCheck = new Runnable() {
+        public void run() {
+            while(keepRunning)
+            {
+                fillerval = FRW.getCurrentPosition();
+                doDaSleep(50);
+                flywheelEncoderSpeed = Math.abs((fillerval - FRW.getCurrentPosition()));
+                if(flywheelSpeed > 0.2)
+                {
+                    if(flywheelEncoderSpeed < 55)
+                    {
+                        flywheelSpeed = 0.4;
+                        targetFlywheelSpeed = 0.4;
+                    }
+                    else
+                    {
+                        flywheelSpeed = 0.20;
+                        targetFlywheelSpeed = 0.20;
+                    }
+                }
+            }
+        }
+    };
+
+    // Create the autonomous thread
+    Thread RPM = new Thread(FlywheelSpeedCheck);
 
     /*
      * encoderDrives - Function to drive with encoder just at one speed
@@ -98,13 +137,13 @@ public class Autonomous extends DefineEverything {
             // Correct in wheels are off
             if(differenceInWheels < -DIFFERENCE_IN_WHEEL_ENCODER_THRESHOLD)
             {
-                rightWheelSpeed = ((speed * ENCODER_DRIVE_STRAIGHT_CORRECTION) * direction);
-                leftWheelSpeed = (speed * direction);
+                rightWheelSpeed = (speed * direction);
+                leftWheelSpeed = ((speed * ENCODER_DRIVE_STRAIGHT_CORRECTION) * direction);
             }
             else if(differenceInWheels > DIFFERENCE_IN_WHEEL_ENCODER_THRESHOLD)
             {
-                rightWheelSpeed = (speed * direction);
-                leftWheelSpeed = ((speed * ENCODER_DRIVE_STRAIGHT_CORRECTION) * direction);
+                rightWheelSpeed = ((speed * ENCODER_DRIVE_STRAIGHT_CORRECTION) * direction);
+                leftWheelSpeed = (speed * direction);
             }
             else
             {
@@ -128,22 +167,22 @@ public class Autonomous extends DefineEverything {
     void gyroTurns(double speed, int targetPosition)
     {
         // Turn the correct direction
-        if(targetPosition < gyro.getIntegratedZValue())
+        if(targetPosition > gyro.getIntegratedZValue())
+    {
+        while(targetPosition > gyro.getIntegratedZValue())
         {
-            while(gyro.getIntegratedZValue() > targetPosition)
-            {
-                leftWheelSpeed = -speed;
-                rightWheelSpeed = speed;
-            }
+            leftWheelSpeed = speed;
+            rightWheelSpeed = -speed;
         }
-        else
+    }
+    else
+    {
+        while(targetPosition < gyro.getIntegratedZValue())
         {
-            while(gyro.getIntegratedZValue() < targetPosition)
-            {
-                leftWheelSpeed = speed;
-                rightWheelSpeed = -speed;
-            }
+            leftWheelSpeed = -speed;
+            rightWheelSpeed = speed;
         }
+    }
     }
 
     /*
@@ -152,23 +191,23 @@ public class Autonomous extends DefineEverything {
     * @param double speed - the speed of the robot while turning
     * @param int targetPosition - the position to turn to relative to starting
     */
-    void gyroTurnsDifferentWheels(double speedR, double speedL, int targetPosition)
+    void gyroTurnsDifferentWheels(double speedL, double speedR, int targetPosition)
     {
         // Turn the correct direction
-        if(targetPosition < gyro.getIntegratedZValue())
+        if(targetPosition > gyro.getIntegratedZValue())
         {
-            while(gyro.getIntegratedZValue() > targetPosition)
+            while(targetPosition > gyro.getIntegratedZValue())
             {
-                leftWheelSpeed = -speedL;
+                leftWheelSpeed = speedL;
                 rightWheelSpeed = speedR;
             }
         }
         else
         {
-            while(gyro.getIntegratedZValue() < targetPosition)
+            while(targetPosition < gyro.getIntegratedZValue())
             {
                 leftWheelSpeed = speedL;
-                rightWheelSpeed = -speedR;
+                rightWheelSpeed = speedR;
             }
         }
     }
@@ -200,7 +239,7 @@ public class Autonomous extends DefineEverything {
                 encoderDrives(((MAXIMUM_MOTOR_SPEED - (oneStepSpeedDifference * checkDifference))), ((ticksToGo - (ticksToGoMaxSpeed - (oneStepTotal * checkDifference))) - SINGLE_STEP_OVERRUN_ADJUSTMENT), direction);
                 for(int turnStep = checkDifference; turnStep < RAMP_ENCODER_STEPS; turnStep++)
                 {
-                    encoderDrives((((MAXIMUM_MOTOR_SPEED - oneStepSpeedDifference) - (oneStepSpeedDifference * turnStep))), (RAMP_DOWN_ENCODER_STEP - SINGLE_STEP_OVERRUN_ADJUSTMENT), direction);
+                    encoderDrives(((((MAXIMUM_MOTOR_SPEED - 0.1) - oneStepSpeedDifference) - (oneStepSpeedDifference * turnStep))), (RAMP_DOWN_ENCODER_STEP - SINGLE_STEP_OVERRUN_ADJUSTMENT), direction);
                 }
                 break;
             }
@@ -320,11 +359,11 @@ public class Autonomous extends DefineEverything {
         {
             if(beaconPusherPosition == 1)
             {
-                beaconPusherSpeed = 0.99;
-                doDaSleep(500);
+                beaconPusherSpeed = 0.01;
+                doDaSleep(150);
                 if(position == 3)
                 {
-                    doDaSleep(100);
+                    doDaSleep(700);
                 }
                 beaconPusherSpeed = 0.5;
             }
@@ -332,24 +371,24 @@ public class Autonomous extends DefineEverything {
             {
                 if(position == 1)
                 {
-                    beaconPusherSpeed = 0.01;
-                    doDaSleep(500);
+                    beaconPusherSpeed = 0.99;
+                    doDaSleep(150);
                     beaconPusherSpeed = 0.5;
                 }
                 else
                 {
-                    beaconPusherSpeed = 0.99;
-                    doDaSleep(100);
+                    beaconPusherSpeed = 0.01;
+                    doDaSleep(600);
                     beaconPusherSpeed = 0.5;
                 }
             }
             else
             {
-                beaconPusherSpeed = 0.01;
-                doDaSleep(100);
+                beaconPusherSpeed = 0.99;
+                doDaSleep(700);
                 if(position == 1)
                 {
-                    doDaSleep(500);
+                    doDaSleep(150);
                 }
                 beaconPusherSpeed = 0.5;
             }
@@ -390,16 +429,19 @@ public class Autonomous extends DefineEverything {
         double dY = Math.abs(currentY - y);
         double hypotenuse = (Math.sqrt((Math.pow(dX, 2)) + (Math.pow(dY, 2))));
         double angle = Math.toDegrees(Math.asin(((dX) / (hypotenuse))));
-        if(currentY > 2.5)
+        if(currentY > y)
         {
             angle = 180 - angle;
         }
-        if(currentX < 2.5)
+        if(currentX < x)
         {
             angle = -angle;
         }
         return ((int)(angle + 0.5));
     }
+
+    int angle = 0;
+    double driveDistance = 0.0;
 
     /*
      * moveToPosition - This will move the robot to the desired position
@@ -417,8 +459,8 @@ public class Autonomous extends DefineEverything {
         // Set up the triangle and solve for the hypotenuse and angle
         double dX = Math.abs(currentX - x);
         double dY = Math.abs(currentY - y);
-        double driveDistance = (Math.sqrt((Math.pow(dX, POWER_OF_TWO)) + (Math.pow(dY, POWER_OF_TWO))));
-        int angle = angleToTurnToLocation(x, y);
+        driveDistance = (Math.sqrt((Math.pow(dX, POWER_OF_TWO)) + (Math.pow(dY, POWER_OF_TWO))));
+        angle = angleToTurnToLocation(x, y);
 
         // Get starting values
         int actualAngle = gyro.getIntegratedZValue();
@@ -439,21 +481,27 @@ public class Autonomous extends DefineEverything {
         }
 
         // Turn then drive forward to new position and set it as current position
-        rampTurnGyro(angle);
-        actualAngle = Math.abs(gyro.getIntegratedZValue() - actualAngle); // Get the final turn value
-        driveTiles(direction, (int)(driveDistance + 0.5));
+        if(currentSlowAutonomous)
+            gyroTurns(MINIMUM_WHEEL_POWER_TO_MOVE, angle);
+        else
+            rampTurnGyro(angle);
+        actualAngle = Math.abs(gyro.getIntegratedZValue()); // Get the final turn value
+        if(currentSlowAutonomous)
+            encoderDrives(MINIMUM_WHEEL_POWER_TO_MOVE, (int)(driveDistance * ENCODER_TICKS_TO_MOVE_ONE_TILE), direction);
+        else
+            driveTiles(direction, (int) (driveDistance + 0.5));
         actualDistance = (Math.abs(actualDistance - getRightWheelEncoderValue()) / ENCODER_TICKS_TO_MOVE_ONE_TILE); // Get the final distance driven
 
         // Set the new position
         if(currentX > x)
-            currentX -= (Math.cos(actualAngle) * actualDistance);
+            currentX -= Math.abs((Math.cos(actualAngle) * actualDistance));
         else
-            currentX -= (Math.cos(actualAngle) * actualDistance);
+            currentX += Math.abs((Math.cos(actualAngle) * actualDistance));
 
         if(currentY > y)
-            currentY -= (Math.sin(actualAngle) * actualDistance);
+            currentY -= Math.abs((Math.sin(actualAngle) * actualDistance));
         else
-            currentY -= (Math.sin(actualAngle) * actualDistance);
+            currentY += Math.abs((Math.sin(actualAngle) * actualDistance));
     }
 
     /*
@@ -491,12 +539,21 @@ public class Autonomous extends DefineEverything {
      * @param double[][] movementsToShoot - The locations to run to in order to shoot in center vortex
      * @param boolean endOnCornerVortex - If you want to end on the corner vortex ramp to catch the
      *                                    extra balls that fall down the ramp
+     * @param boolean slowAutonomous - Run the autonomous slower to be more accurate and maybe bait
+     *                                 teams into trying to block us
      */
     void allAutonomous(boolean alliance, double[] startingCoordinates, int delay,
                        boolean[] beaconsToGet, boolean shootBeforeBeacons, boolean defense,
                        int delayBeforeDefense, ArrayList<double[]> movementsForDefense, int delayBeforeShooting,
-                       ArrayList<double[]> movementsToShoot, boolean endOnCornerVortex)
+                       ArrayList<double[]> movementsToShoot, boolean endOnCornerVortex, boolean slowAutonomous)
     {
+        if(slowAutonomous)
+        {
+            OVERRUN_CORRECTION_WAIT_TIME = 400;
+            RAMP_DOWN_ENCODER_STEP = 600;
+            RAMP_UP_ENCODER_STEP = 400;
+            GYRO_STEP_VALUE = 50;
+        }
         currentX = startingCoordinates[0];
         currentY = startingCoordinates[1];
         doDaSleep(delay);
@@ -519,14 +576,16 @@ public class Autonomous extends DefineEverything {
             }
 
             // Run flywheel and shoot
-            targetFlywheelSpeed = 0.3;
+            targetFlywheelSpeed = 0.25;
             while(targetFlywheelSpeed != flywheelSpeed)
             {
                 doDaSleep(10);
             }
-            frontIntakesSpeed = 0.99;
-            doDaSleep(2000);
+            frontIntakesSpeed = 0.01;
+            backIntakeSpeed = 0.99;
+            doDaSleep(5000);
             frontIntakesSpeed = 0.5;
+            backIntakeSpeed = 0.5;
             targetFlywheelSpeed = 0.0;
             while(targetFlywheelSpeed != flywheelSpeed)
             {
@@ -620,14 +679,16 @@ public class Autonomous extends DefineEverything {
             }
 
             // Run flywheel and shoot
-            targetFlywheelSpeed = 0.3;
+            targetFlywheelSpeed = 0.25;
             while(targetFlywheelSpeed != flywheelSpeed)
             {
                 doDaSleep(10);
             }
-            frontIntakesSpeed = 0.99;
-            doDaSleep(2000);
+            frontIntakesSpeed = 0.01;
+            backIntakeSpeed = 0.99;
+            doDaSleep(5000);
             frontIntakesSpeed = 0.5;
+            backIntakeSpeed= 0.5;
             targetFlywheelSpeed = 0.0;
             while(targetFlywheelSpeed != flywheelSpeed)
             {
@@ -652,6 +713,552 @@ public class Autonomous extends DefineEverything {
 
     }
 
+    boolean colorisRed = false;
+
+    void redAuton()
+    {
+        encoderDrives(0.1, 130, BACKWARD);
+        encoderDrives(0.25, 130, BACKWARD);
+        encoderDrives(0.4, 245, BACKWARD);
+        encoderDrives(0.25, 130, BACKWARD);
+        encoderDrives(0.1, 130, BACKWARD);
+        gyroTurns(0.01, -9);
+        rightWheelSpeed = 0.0;
+        leftWheelSpeed = 0.0;
+        doDaSleep(500);
+        rightWheelSpeed = 0.1;
+        leftWheelSpeed = 0.1;
+        doDaSleep(100);
+        rightWheelSpeed = 0.0;
+        leftWheelSpeed = 0.0;
+        timerVar2 = System.currentTimeMillis();
+        beaconPusherSpeed = 0.01;
+        while((color.blue() < 3 && color.red() < 3) && (System.currentTimeMillis() > (timerVar2 + 800)))
+        {
+            doDaSleep(10);
+        }
+        if(color.blue() > 2 || color.red() > 2)
+        {
+            doDaSleep(400);
+        }
+        beaconPusherSpeed = 0.5;
+        Drive_CorrectRed1.start();
+        donePushing = false;
+        do
+        {
+            leftWheelSpeed = 0.08;
+            rightWheelSpeed = 0.08;
+        } while(color.red() < 3);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(500);
+        do
+        {
+            leftWheelSpeed = -0.08;
+            rightWheelSpeed = -0.08;
+        } while(color.red() < 3);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        Push_Beacon.start();
+        while(!donePushing)
+        {
+            doDaSleep(10);
+        }
+        doDaSleep(200);
+        donePushing = false;
+        Drive_CorrectRed.start();
+        encoderDrives(0.1, 50, BACKWARD);
+        encoderDrives(0.25, 50, BACKWARD);
+        encoderDrives(0.4, 40, BACKWARD);
+        encoderDrives(0.25, 50, BACKWARD);
+        encoderDrives(0.1, 50, BACKWARD);
+        leftWheelSpeed = 0.08;
+        rightWheelSpeed = 0.08;
+        doDaSleep(500);
+        do
+        {
+            leftWheelSpeed = 0.08;
+            rightWheelSpeed = 0.08;
+        } while(color.red() < 3);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(500);
+        do
+        {
+            leftWheelSpeed = -0.08;
+            rightWheelSpeed = -0.08;
+        } while(color.red() < 3);
+        doDaSleep(150);
+        Push_Beacon2.start();
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        while(!donePushing)
+        {
+            doDaSleep(10);
+        }
+        /*encoderDrives(0.1, 730, BACKWARD);
+        /*if(Math.abs(getRightWheelEncoderValue()) > 850)
+        {
+            encoderDrives(0.05, (Math.abs(getRightWheelEncoderValue()) - 850), FORWARD);
+        }
+        else
+        {
+            encoderDrives(0.05, (850 - Math.abs(getRightWheelEncoderValue())), BACKWARD);
+        }*/
+        /*gyroTurnsDifferentWheels(-0.02, -0.1, -20);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+        gyroTurns(0.07, -40);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+        if(gyro.getIntegratedZValue() < -45)
+        {
+            gyroTurns(0.05, -47);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        putBeaconPusherInPosition(2);
+        timerVar2 = System.currentTimeMillis();
+        do
+        {
+            leftWheelSpeed = -0.04;
+            rightWheelSpeed = -0.04;
+        } while(color.red() < 3);
+
+        if(System.currentTimeMillis() > timerVar2 + 400)
+        {
+            leftWheelSpeed = 0.06;
+            rightWheelSpeed = 0.06;
+            doDaSleep(1100);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        putBeaconPusherInPosition(3);
+        doDaSleep(1000);
+        beaconPusherSpeed = 0.99;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.5;
+        leftWheelMultiplier = 1.35;
+        leftWheelSpeed = -0.06;
+        rightWheelSpeed = -0.06;
+        doDaSleep(1100);
+        if(gyro.getIntegratedZValue() > -43)
+        {
+            gyroTurns(0.05, -41);
+        }
+        else if(gyro.getIntegratedZValue() < -47){
+            gyroTurns(0.05, -48);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(200);
+        leftWheelSpeed = -0.06;
+        rightWheelSpeed = -0.06;
+        doDaSleep(1100);
+        if(gyro.getIntegratedZValue() > -43)
+        {
+            gyroTurns(0.05, -41);
+        }
+        else if(gyro.getIntegratedZValue() < -47){
+            gyroTurns(0.05, -48);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(200);
+        timerVar2 = System.currentTimeMillis();
+        do
+        {
+            leftWheelSpeed = -0.06;
+            rightWheelSpeed = -0.06;
+        } while(color.red() < 3);
+
+        if(System.currentTimeMillis() > timerVar2 + 400) {
+            leftWheelSpeed = 0.06;
+            rightWheelSpeed = 0.06;
+            doDaSleep(1100);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        beaconPusherSpeed = 0.01;
+        doDaSleep(700);
+        beaconPusherSpeed = 0.5;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.99;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.5;
+
+        doDaSleep(1000);
+
+        encoderDrives(0.1, 200, FORWARD);
+
+        gyroTurns(0.08, -10);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+        gyroTurns(0.06, 30);
+
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+
+        encoderDrives(0.1, 225, FORWARD);
+
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        targetFlywheelSpeed = 0.22;
+        while(flywheelSpeed < 0.22)
+        {
+            doDaSleep(10);
+        }
+        RPM.start();
+
+        doDaSleep(1000);
+
+        frontIntakesSpeed = 0.01;
+        backIntakeSpeed = 0.1;
+
+        doDaSleep(8000);
+
+        frontIntakesSpeed = 0.5;
+        backIntakeSpeed = 0.5;
+
+        keepRunning = false;
+        doDaSleep(1000);
+        targetFlywheelSpeed = 0.0;
+
+        while(flywheelSpeed > 0.1)
+        {
+            doDaSleep(10);
+        }
+
+        encoderDrives(0.1, 550, FORWARD);*/
+    }
+
+
+    void blueAuton()
+    {
+        if((false == true) || (0 == 1)){
+            return;
+        }
+        encoderDrives(0.1, 130, FORWARD);
+        encoderDrives(0.25, 130, FORWARD);
+        encoderDrives(0.4, 105, FORWARD);
+        encoderDrives(0.25, 130, FORWARD);
+        encoderDrives(0.1, 130, FORWARD);
+        gyroTurns(0.1, 21);
+        rightWheelSpeed = 0.0;
+        leftWheelSpeed = 0.0;
+        doDaSleep(500);
+        rightWheelSpeed = 0.1;
+        leftWheelSpeed = 0.1;
+        doDaSleep(100);
+        rightWheelSpeed = 0.0;
+        leftWheelSpeed = 0.0;
+        timerVar2 = System.currentTimeMillis();
+        beaconPusherSpeed = 0.01;
+        while((color.blue() < 3 && color.red() < 3) && (System.currentTimeMillis() > (timerVar2 + 800)))
+        {
+            doDaSleep(10);
+        }
+        if(color.blue() > 2 || color.red() > 2)
+        {
+            doDaSleep(400);
+        }
+        beaconPusherSpeed = 0.5;
+        do
+        {
+            leftWheelSpeed = -0.08;
+            rightWheelSpeed = -0.08;
+        } while(color.blue() < 3);
+        int rightVal = getRightWheelEncoderValue();
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(200);
+        Push_Beacon.start();
+        encoderDrives(0.1, Math.abs(rightVal - getRightWheelEncoderValue()), BACKWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        while(!donePushing)
+        {
+            doDaSleep(10);
+        }
+        doDaSleep(200);
+        donePushing = false;
+        Drive_Correct.start();
+        encoderDrives(0.1, 50, FORWARD);
+        encoderDrives(0.25, 50, FORWARD);
+        encoderDrives(0.4, 40, FORWARD);
+        encoderDrives(0.25, 50, FORWARD);
+        encoderDrives(0.1, 50, FORWARD);
+        leftWheelSpeed = -0.08;
+        rightWheelSpeed = -0.08;
+        doDaSleep(500);
+        do
+        {
+            leftWheelSpeed = -0.08;
+            rightWheelSpeed = -0.08;
+        } while(color.blue() < 3);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(500);
+        do
+        {
+            leftWheelSpeed = 0.08;
+            rightWheelSpeed = 0.08;
+        } while(color.blue() < 3);
+        doDaSleep(150);
+        Push_Beacon2.start();
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        while(!donePushing)
+        {
+            doDaSleep(10);
+        }
+
+        /*encoderDrives(0.1, 730, FORWARD);
+        gyroTurnsDifferentWheels(0.02, 0.1, 20);
+        gyroTurns(0.07, 40);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+        if(gyro.getIntegratedZValue() > 45)
+        {
+            gyroTurns(0.05, 47);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        putBeaconPusherInPosition(2);
+        do
+        {
+            leftWheelSpeed = 0.04;
+            rightWheelSpeed = 0.04;
+        } while(color.blue() < 4);
+
+        leftWheelSpeed = -0.06;
+        rightWheelSpeed = -0.06;
+        doDaSleep(1000);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        putBeaconPusherInPosition(3);
+        doDaSleep(1000);
+        beaconPusherSpeed = 0.99;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.5;
+        leftWheelSpeed = 0.06;
+        rightWheelSpeed = 0.06;
+        doDaSleep(1500);
+        if(gyro.getIntegratedZValue() < 47)
+        {
+            gyroTurns(0.05, 44);
+        }
+        else {
+            gyroTurns(0.05, 48);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(200);
+        timerVar2 = System.currentTimeMillis();
+        do
+        {
+            leftWheelSpeed = 0.06;
+            rightWheelSpeed = 0.06;
+        } while(color.blue() < 4);
+
+        if(System.currentTimeMillis() > timerVar2 + 400) {
+            leftWheelSpeed = -0.06;
+            rightWheelSpeed = -0.06;
+            doDaSleep(1000);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        beaconPusherSpeed = 0.01;
+        doDaSleep(700);
+        beaconPusherSpeed = 0.5;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.99;
+        doDaSleep(200);
+        beaconPusherSpeed = 0.5;
+
+        doDaSleep(1000);
+
+        encoderDrives(0.1, 200, BACKWARD);
+
+        gyroTurns(0.08, 105);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+        gyroTurns(0.06, 150);
+
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(1000);
+
+        encoderDrives(0.1, 300, FORWARD);
+
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        targetFlywheelSpeed = 0.22;
+        while(flywheelSpeed < 0.22)
+        {
+            doDaSleep(10);
+        }
+        RPM.start();
+
+        doDaSleep(1000);
+
+        frontIntakesSpeed = 0.01;
+        backIntakeSpeed = 0.1;
+
+        doDaSleep(8000);
+
+        frontIntakesSpeed = 0.5;
+        backIntakeSpeed = 0.5;
+
+        keepRunning = false;
+        doDaSleep(1000);
+
+        targetFlywheelSpeed = 0.0;
+        while(flywheelSpeed > 0.0)
+        {
+            doDaSleep(10);
+        }
+
+        encoderDrives(0.1, 550, FORWARD);*/
+    }
+
+    void forwardLaunchAuton()
+    {
+        encoderDrives(0.1, 550, FORWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        targetFlywheelSpeed = 0.18;
+        while(flywheelSpeed < 0.17)
+        {
+            doDaSleep(10);
+        }
+
+        doDaSleep(1000);
+
+        RPM.start();
+
+        frontIntakesSpeed = 0.01;
+        backIntakeSpeed = 0.1;
+
+        doDaSleep(8000);
+
+        encoderDrives(0.1, 550, FORWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+
+        keepRunning = false;
+        doDaSleep(1000);
+
+        frontIntakesSpeed = 0.5;
+        backIntakeSpeed = 0.5;
+
+        targetFlywheelSpeed = 0.0;
+        while(flywheelSpeed > 0.0)
+        {
+            doDaSleep(10);
+        }
+    }
+
+
+    Runnable pushBeacon = new Runnable()
+    {
+        public void run()
+        {
+            donePushing = false;
+            beaconPusherSpeed = 0.01;
+            doDaSleep(850);
+            beaconPusherSpeed = 0.5;
+            doDaSleep(500);
+            beaconPusherSpeed = 0.99;
+            doDaSleep(200);
+            beaconPusherSpeed = 0.5;
+            donePushing = true;
+        }
+    };
+
+    Runnable pushBeacon2 = new Runnable()
+    {
+        public void run()
+        {
+            doDaSleep(700);
+            donePushing = false;
+            beaconPusherSpeed = 0.01;
+            doDaSleep(800);
+            beaconPusherSpeed = 0.5;
+            doDaSleep(500);
+            beaconPusherSpeed = 0.99;
+            doDaSleep(200);
+            beaconPusherSpeed = 0.5;
+            donePushing = true;
+        }
+    };
+
+    Thread Push_Beacon = new Thread(pushBeacon);
+    Thread Push_Beacon2 = new Thread(pushBeacon2);
+
+    Runnable correctDrive = new Runnable()
+    {
+        public void run()
+        {
+            while(donePushing == false)
+            {
+                if (gyro.getIntegratedZValue() < 44)
+                {
+                        leftSpeedMultiplier = 1.2;
+                }
+                else if (gyro.getIntegratedZValue() > 46)
+                {
+                        leftSpeedMultiplier = 2.1;
+                }
+                else
+                {
+                    leftSpeedMultiplier = 1.7;
+                }
+            }
+            leftSpeedMultiplier = 1.7;
+        }
+    };
+
+    Runnable correctDriveRed = new Runnable()
+    {
+        public void run()
+        {
+            while(donePushing == false)
+            {
+                if (gyro.getIntegratedZValue() < -46)
+                {
+                    leftSpeedMultiplier = 2.6;
+                }
+                else if (gyro.getIntegratedZValue() > -44)
+                {
+                    leftSpeedMultiplier = 0.7;
+                }
+                else
+                {
+                    leftSpeedMultiplier = 1.7;
+                }
+            }
+            leftSpeedMultiplier = 1.7;
+        }
+    };
+
+    Thread Drive_Correct = new Thread(correctDrive);
+    Thread Drive_CorrectRed = new Thread(correctDriveRed);
+    Thread Drive_CorrectRed1 = new Thread(correctDriveRed);
+
     /*
      * AutoPro - The thread to run the autonomous that sets the motor powers
      *           and lets the main loop set the motors to those speeds, doing
@@ -660,10 +1267,25 @@ public class Autonomous extends DefineEverything {
     Runnable AutoPro = new Runnable() {
         public void run() {
             // Run autonomous
-            allAutonomous(currentAlliance, currentStartingCoordinates, currentDelay,
+            /*allAutonomous(currentAlliance, currentStartingCoordinates, currentDelay,
                           currentBeaconsToGet, currentShootBeforeBeacons, currentDefense,
                           currentDelayBeforeDefense, currentMovementsForDefense, currentDelayBeforeShooting,
-                          currentMovementsToShoot, currentEndOnCornerVortex);
+                          currentMovementsToShoot, currentEndOnCornerVortex, currentSlowAutonomous);*/
+
+            //driveTiles(1.0, FORWARD);
+            doDaSleep(currentDelay);
+            leftWheelMultiplier = 1.25;
+            if (currentAlliance == RED)
+            {
+                    blueAuton();
+            }
+            else
+            {
+                    redAuton();
+            }
+
+
+
 
             // At the end of the autonomous routine stop motors
             rightWheelSpeed = STOP_MOTOR_SPEED;
@@ -692,27 +1314,29 @@ public class Autonomous extends DefineEverything {
         BRW = hardwareMap.dcMotor.get("BRW");
 
         URFW = hardwareMap.dcMotor.get("URFW"); // Flywheel
-        LRFW = hardwareMap.dcMotor.get("LRFW");
+        LRFW = hardwareMap.dcMotor.get("IRD");
         ULFW = hardwareMap.dcMotor.get("ULFW");
-        LLFW = hardwareMap.dcMotor.get("LLFW");
+        LLFW = hardwareMap.dcMotor.get("ILD");
 
-        BI = hardwareMap.servo.get("BI"); // Intakes
+        //FI = hardwareMap.servo.get("FI");
+        BI = hardwareMap.servo.get("BI");
         BFI = hardwareMap.servo.get("BFI");
         FFI = hardwareMap.servo.get("FFI");
+        BP = hardwareMap.servo.get("BP");
 
-        BP = hardwareMap.servo.get("BP"); // Beacon Pusher
 
-        // Map Sensors
         color = hardwareMap.colorSensor.get("color");
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
 
         // Reverse Motors
         BRW.setDirection(DcMotorSimple.Direction.REVERSE);
-        FLW.setDirection(DcMotorSimple.Direction.REVERSE);
+        FRW.setDirection(DcMotorSimple.Direction.REVERSE);
+
 
         // Reverse Flywheels
+        LLFW.setDirection(DcMotorSimple.Direction.REVERSE);
+
         ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
-        LRFW.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Initialize all values of the parameters string array
         for(int h = 0; h < allParametersStringArray.length; h++)
@@ -756,12 +1380,12 @@ public class Autonomous extends DefineEverything {
             {
                 case 0:
                     currentAlliance = true;
-                    currentStartingCoordinates[0] = 2.0;
-                    currentStartingCoordinates[1] = 0.36458;
+                    currentStartingCoordinates[0] = 4.5;
+                    currentStartingCoordinates[1] = 0.5;
                     currentDelay = 0;
                     currentBeaconsToGet[0] = true;
                     currentBeaconsToGet[1] = true;
-                    currentShootBeforeBeacons = false;
+                    currentShootBeforeBeacons = true;
                     currentDefense = false;
                     currentDelayBeforeDefense = 0;
                     currentMovementsForDefense.clear();
@@ -769,6 +1393,7 @@ public class Autonomous extends DefineEverything {
                     currentMovementsToShoot.clear();
                     currentMovementsToShoot.add(new double[]{1.5, 3.5});
                     currentEndOnCornerVortex = false;
+                    currentSlowAutonomous = true;
                     break;
                 case 1:
                     currentAlliance = false;
@@ -785,6 +1410,7 @@ public class Autonomous extends DefineEverything {
                     currentMovementsToShoot.clear();
                     currentMovementsToShoot.add(new double[]{4.5, 3.5});
                     currentEndOnCornerVortex = false;
+                    currentSlowAutonomous = true;
                     break;
                 case 2:
                     currentAlliance = true;
@@ -800,6 +1426,7 @@ public class Autonomous extends DefineEverything {
                     currentDelayBeforeShooting = 0;
                     currentMovementsToShoot.clear();
                     currentEndOnCornerVortex = false;
+                    currentSlowAutonomous = false;
                     break;
                 default:
 
@@ -863,6 +1490,7 @@ public class Autonomous extends DefineEverything {
             }
         }
         allParametersStringArray[10] = currentEndOnCornerVortex + "";
+        allParametersStringArray[11] = currentSlowAutonomous + "";
 
         // Switch case to change values based on which value you are on and what buttons you press
         // Also puts the "*" at the end of the values you are currently editing
@@ -1280,16 +1908,27 @@ public class Autonomous extends DefineEverything {
                 }
                 allParametersStringArray[10] = currentEndOnCornerVortex + "*";
                 break;
+            case 11:
+                if(gamepad1.y)
+                {
+                    currentSlowAutonomous = true;
+                }
+                if(gamepad1.a)
+                {
+                    currentSlowAutonomous = false;
+                }
+                allParametersStringArray[11] = currentSlowAutonomous + "*";
+                break;
             default:
                 break;
         }
 
         // Display the current autonomous configuration
-        telemetry.addData("Pre-Set Autonomous ", headerStringArray[headerStringArrayLocation]);
-        telemetry.addData("Red Alliance ", allParametersStringArray[0]);
-        telemetry.addData("Starting Coordinates ", allParametersStringArray[1]);
+        telemetry.addData("Heading ", headerStringArray[headerStringArrayLocation]);
+        telemetry.addData("Alliance ", currentAlliance);
+        telemetry.addData("Color Red ", color.red());
         telemetry.addData("Delay ", allParametersStringArray[2]);
-        telemetry.addData("Beacons To Get ", allParametersStringArray[3]);
+        telemetry.addData("Color Blue ", color.blue());
         telemetry.addData("Shoot Before Beacons ", allParametersStringArray[4]);
         telemetry.addData("Defense " , allParametersStringArray[5]);
         telemetry.addData("Delay Before Defense ", allParametersStringArray[6]);
@@ -1297,7 +1936,10 @@ public class Autonomous extends DefineEverything {
         telemetry.addData("Delay Before Shooting ", allParametersStringArray[8]);
         telemetry.addData("Movements To Shoot ", allParametersStringArray[9]);
         telemetry.addData("End on Corner Vortex", allParametersStringArray[10]);
+        telemetry.addData("Slow Autonomous", allParametersStringArray[11]);
     }
+
+
 
     /*
      * This method will be called repeatedly in a loop
@@ -1308,7 +1950,7 @@ public class Autonomous extends DefineEverything {
         // Start the autonomous thread only once
         if(val == (int)NOTHING)
         {
-            //Autonomous.start();
+            Autonomous.start();
             val++;
         }
 
@@ -1322,20 +1964,23 @@ public class Autonomous extends DefineEverything {
             timerVar = 0;
         }
 
-        if(targetFlywheelSpeed > 0.0 && (flywheelSpeed > (targetFlywheelSpeed - 0.01)) && (flywheelSpeed < (targetFlywheelSpeed + 0.01))) {
-            backIntakeSpeed = 0.1;
-        } else
-        {
-            backIntakeSpeed = 0.5;
-        }
-
         // Run the motors at the speeds defined by the autonomous thread
-        runLeftWheels(leftWheelSpeed);
+        runLeftWheels((leftWheelSpeed * leftSpeedMultiplier));
         runRightWheels(rightWheelSpeed);
         runFlywheel(flywheelSpeed);
         runFrontIntakes(frontIntakesSpeed);
         BI.setPosition(backIntakeSpeed);
         BP.setPosition(beaconPusherSpeed);
+
+        telemetry.addData("Right Speed", rightWheelSpeed);
+        telemetry.addData("Left Speed", leftWheelSpeed);
+        telemetry.addData("Gyro ", gyro.getIntegratedZValue());
+        telemetry.addData("Right Encoder", getRightWheelEncoderValue());
+        telemetry.addData("Left Encoder", getLeftWheelEncoderValue());
+        telemetry.addData("Blue", color.blue());
+        telemetry.addData("Target Flywheel", targetFlywheelSpeed);
+
+        doDaSleep(7);
     }
 
 }

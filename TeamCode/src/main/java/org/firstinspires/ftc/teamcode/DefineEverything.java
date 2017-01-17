@@ -43,11 +43,11 @@ public class DefineEverything extends OpMode {
     final double STOP_MOTOR_SPEED = 0.0;
 
     // Autonomous Constants
-    final int BACKWARD = -1; // General
-    final int FORWARD = 1;
-    final int OVERRUN_CORRECTION_WAIT_TIME = 200;
+    final int BACKWARD = 1; // General
+    final int FORWARD = -1;
+    int OVERRUN_CORRECTION_WAIT_TIME = 200;
     final double MINIMUM_WHEEL_POWER_TO_MOVE = 0.3;
-    final double RAMP_UP_START_SPEED = 0.3;
+    final double RAMP_UP_START_SPEED = 0.2;
     final int TICKS_PER_WHEEL_MOTOR_ROTATION = 1120;
     final double WHEEL_GEAR_RATIO = 4;
     final double WHEEL_DIAMETER = 4;
@@ -56,19 +56,19 @@ public class DefineEverything extends OpMode {
     final boolean BLUE = false;
 
     final int ENCODER_CALIBRATION_WAIT_TIME = 100; // Initialize function
-    final int GYRO_CALIBRATION_WAIT_TIME = 50;
+    final int GYRO_CALIBRATION_WAIT_TIME = 10;
 
     final int DIFFERENCE_IN_WHEEL_ENCODER_THRESHOLD = 50; // Basic encoder drives
     final double ENCODER_DRIVE_STRAIGHT_CORRECTION = 0.9;
 
-    final int RAMP_DOWN_ENCODER_STEP = 600; // Ramp encoder drive
+    int RAMP_DOWN_ENCODER_STEP = 300; // Ramp encoder drive
     final int RAMP_ENCODER_STEPS = 3;
-    final int RAMP_UP_ENCODER_STEP = 300;
-    final int SINGLE_STEP_OVERRUN_ADJUSTMENT = 10;
+    int  RAMP_UP_ENCODER_STEP = 200;
+    final int SINGLE_STEP_OVERRUN_ADJUSTMENT = 50;
 
     final int GYRO_RAMP_STEPS = 2; // Ramp gyro turning
-    final int GYRO_STEP_VALUE = 25;
-    final int SINGLE_STEP_OVERTURN_ADJUSTMENT = 5;
+    int GYRO_STEP_VALUE = 25;
+    final int SINGLE_STEP_OVERTURN_ADJUSTMENT = 13;
     final double GYRO_TURN_MAX_SPEED = 0.8;
 
     final int STRAIGHT_ANGLE = 180; // Move to position
@@ -87,27 +87,29 @@ public class DefineEverything extends OpMode {
         BRW = hardwareMap.dcMotor.get("BRW");
 
         URFW = hardwareMap.dcMotor.get("URFW"); // Flywheel
-        LRFW = hardwareMap.dcMotor.get("LRFW");
+        LRFW = hardwareMap.dcMotor.get("IRD");
         ULFW = hardwareMap.dcMotor.get("ULFW");
-        LLFW = hardwareMap.dcMotor.get("LLFW");
+        LLFW = hardwareMap.dcMotor.get("ILD");
 
-        BI = hardwareMap.servo.get("BI"); // Intakes
+        //FI = hardwareMap.servo.get("FI");
+        BI = hardwareMap.servo.get("BI");
         BFI = hardwareMap.servo.get("BFI");
         FFI = hardwareMap.servo.get("FFI");
+        BP = hardwareMap.servo.get("BP");
 
-        BP = hardwareMap.servo.get("BP"); // Beacon Pusher
+        // Reverse Motors
+        BRW.setDirection(DcMotorSimple.Direction.REVERSE);
+        FRW.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // Reverse Flywheels
+        LLFW.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
+
 
         // Map Sensors
         color = hardwareMap.colorSensor.get("color");
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("gyro");
-
-        // Reverse Motors
-        BRW.setDirection(DcMotorSimple.Direction.REVERSE);
-        FLW.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        // Reverse Flywheels
-        ULFW.setDirection(DcMotorSimple.Direction.REVERSE);
-        LRFW.setDirection(DcMotorSimple.Direction.REVERSE);
 
     }
 
@@ -135,9 +137,10 @@ public class DefineEverything extends OpMode {
      */
     void runRightWheels(double speed)
     {
-        speed = Range.clip(speed, MINIMUM_MOTOR_SPEED, MAXIMUM_MOTOR_SPEED);
+        speed = Range.clip(speed, -1.0, 1.0);
         FRW.setPower(speed);
-        BRW.setPower(speed);
+        BRW.setPower((Range.clip((speed * 1.0), -1.0, 1.0)));
+        LRFW.setPower(speed);
     }
 
     /*
@@ -146,9 +149,10 @@ public class DefineEverything extends OpMode {
      */
     void runLeftWheels(double speed)
     {
-        speed = Range.clip(speed, -MINIMUM_MOTOR_SPEED, MAXIMUM_MOTOR_SPEED);
+        speed = Range.clip(speed, -1.0, 1.0);
         FLW.setPower(speed);
-        BLW.setPower(speed);
+        BLW.setPower((Range.clip((speed * 1.0), -1.0, 1.0)));
+        LLFW.setPower(speed);
     }
 
     /*
@@ -160,8 +164,6 @@ public class DefineEverything extends OpMode {
         speed = Range.clip(speed, -1.0, 1.0);
         ULFW.setPower(speed);
         URFW.setPower(speed);
-        LLFW.setPower(speed);
-        LRFW.setPower(speed);
     }
 
     /*
@@ -195,7 +197,7 @@ public class DefineEverything extends OpMode {
      */
     DcMotor rightEncoderMotor()
     {
-        return BRW;
+        return LRFW;
     }
 
     /*
@@ -204,7 +206,7 @@ public class DefineEverything extends OpMode {
      */
     DcMotor leftEncoderMotor()
     {
-        return BLW;
+        return ULFW;
     }
 
     /*
@@ -213,7 +215,7 @@ public class DefineEverything extends OpMode {
      */
     int getRightWheelEncoderValue()
     {
-        return BRW.getCurrentPosition();
+        return rightEncoderMotor().getCurrentPosition();
     }
 
     /*
@@ -222,7 +224,7 @@ public class DefineEverything extends OpMode {
      */
     int getLeftWheelEncoderValue()
     {
-        return BLW.getCurrentPosition();
+        return leftEncoderMotor().getCurrentPosition();
     }
 
 }

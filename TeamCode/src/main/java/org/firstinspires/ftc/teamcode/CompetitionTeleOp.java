@@ -6,12 +6,27 @@ package org.firstinspires.ftc.teamcode;
 public class CompetitionTeleOp extends DefineEverything {
 
 
+    double targetFlywheelSpeed = 0.0;
+    double flywheelSpeed = 0.0;
+    long timerVar = 0;
 
     /*
      * controlFlywheel - Controls the flywheel based on the target speed changed by buttons by
      *                   ramping the speed up and down by a amount to be tuned later
      * Button Mapping - 2A: 0.0 speed, 2Y: 0.25 speed, 2X: -= 0.01 speed, 2B: += 0.01 speed
      */
+    void controlFlywheel()
+    {
+        if(targetFlywheelSpeed != flywheelSpeed && (timerVar == 0 || System.currentTimeMillis() > (timerVar + 30)))
+        {
+            flywheelSpeed += (((targetFlywheelSpeed - flywheelSpeed) / (Math.abs(targetFlywheelSpeed - flywheelSpeed))) * 0.01);
+            timerVar = System.currentTimeMillis();
+        }
+        else
+        {
+            timerVar = 0;
+        }
+    }
 
     /*
      * controlDrive - Controls the drive with tank drive and turbo/slow options, default is half speed
