@@ -52,6 +52,8 @@ public class VEXEncoder {
      * Gets the speed of the motors in ticks/50 ms
      * returns -1 if the values wrap around
      *
+     * DON'T USE, IS VERY TRASH, MADE BY CONNOR
+     *
      * @param encoder the i2c address to read
      * @return distance the motors moves in 50 milliseconds
      */
