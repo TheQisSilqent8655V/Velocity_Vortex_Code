@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.util.Range;
 /**
  * Created by Conno on 1/14/2017.
  */
-//@TeleOp(name = "TestBot TeleOp", group = "TeleOp")
+@TeleOp(name = "TestBot TeleOp", group = "TeleOp")
 public class TestBot extends OpMode{
 
     DcMotor LW;

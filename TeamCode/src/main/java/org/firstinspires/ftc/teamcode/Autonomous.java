@@ -59,6 +59,14 @@ public class Autonomous extends DefineEverything {
     long timerVar2 = 0;
     boolean donePushing = false;
     double leftSpeedMultiplier = 1.6;
+    double oldLaunchSpeed = 0.0;
+    boolean rampDown = false;
+
+    int daAutoDelay = 0;
+    boolean daBlueAuto = false;
+    boolean launchForwardAuto = false;
+    boolean pressedDaChange = false;
+    boolean defense = false;
 
     /*
      * initializeAllSensorsSlashEncoders - Function to reset and initialize all da stuff
@@ -68,10 +76,12 @@ public class Autonomous extends DefineEverything {
         rightEncoderMotor().setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftEncoderMotor().setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         URFW.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        ULFW.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         doDaSleep(ENCODER_CALIBRATION_WAIT_TIME);
         rightEncoderMotor().setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftEncoderMotor().setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        URFW.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        URFW.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        ULFW.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // Initialize color
         color.enableLed(false);
@@ -90,26 +100,29 @@ public class Autonomous extends DefineEverything {
     boolean keepRunning = true;
 
     Runnable FlywheelSpeedCheck = new Runnable() {
-        public void run() {
+        public void run()
+        {
             while(keepRunning)
             {
-                fillerval = FRW.getCurrentPosition();
+                fillerval = leftEncoderMotor().getCurrentPosition();
                 doDaSleep(50);
-                flywheelEncoderSpeed = Math.abs((fillerval - FRW.getCurrentPosition()));
-                if(flywheelSpeed > 0.2)
+                flywheelEncoderSpeed = Math.abs((fillerval - leftEncoderMotor().getCurrentPosition()));
+                if (flywheelSpeed > (0.27 - 0.01) && targetFlywheelSpeed > (0.27 - 0.01))
                 {
-                    if(flywheelEncoderSpeed < 55)
-                    {
-                        flywheelSpeed = 0.4;
-                        targetFlywheelSpeed = 0.4;
-                    }
-                    else
-                    {
-                        flywheelSpeed = 0.20;
-                        targetFlywheelSpeed = 0.20;
-                    }
+                        if (flywheelEncoderSpeed < 80)
+                        {
+                            flywheelSpeed = 0.53;
+                            targetFlywheelSpeed = 0.53;
+                        }
+                        else
+                        {
+                            flywheelSpeed = 0.27;
+                            targetFlywheelSpeed = 0.27;
+                        }
                 }
             }
+            flywheelSpeed = 0.27;
+            targetFlywheelSpeed = 0.27;
         }
     };
 
@@ -719,18 +732,33 @@ public class Autonomous extends DefineEverything {
     {
         encoderDrives(0.1, 130, BACKWARD);
         encoderDrives(0.25, 130, BACKWARD);
-        encoderDrives(0.4, 245, BACKWARD);
+        encoderDrives(0.4, 195, BACKWARD);
         encoderDrives(0.25, 130, BACKWARD);
         encoderDrives(0.1, 130, BACKWARD);
-        gyroTurns(0.01, -9);
+        gyroTurns(0.1, -11);
         rightWheelSpeed = 0.0;
         leftWheelSpeed = 0.0;
-        doDaSleep(500);
+        doDaSleep(1000);
         rightWheelSpeed = 0.1;
         leftWheelSpeed = 0.1;
         doDaSleep(100);
         rightWheelSpeed = 0.0;
         leftWheelSpeed = 0.0;
+        long daRedTimeVar = System.currentTimeMillis();
+        if(gyro.getIntegratedZValue() < -48)
+        {
+            gyroTurns(0.15, -47);
+        }
+        else if(gyro.getIntegratedZValue() > -42)
+        {
+            while(gyro.getIntegratedZValue() > -42 && System.currentTimeMillis() < (daRedTimeVar + 2000))
+            {
+                leftWheelSpeed = 0.1;
+                rightWheelSpeed = -0.1;
+            }
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
         timerVar2 = System.currentTimeMillis();
         beaconPusherSpeed = 0.01;
         while((color.blue() < 3 && color.red() < 3) && (System.currentTimeMillis() > (timerVar2 + 800)))
@@ -746,17 +774,17 @@ public class Autonomous extends DefineEverything {
         donePushing = false;
         do
         {
-            leftWheelSpeed = 0.08;
-            rightWheelSpeed = 0.08;
-        } while(color.red() < 3);
+            leftWheelSpeed = 0.1;
+            rightWheelSpeed = 0.1;
+        } while(color.red() < 2);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
         doDaSleep(500);
         do
         {
-            leftWheelSpeed = -0.08;
-            rightWheelSpeed = -0.08;
-        } while(color.red() < 3);
+            leftWheelSpeed = -0.1;
+            rightWheelSpeed = -0.1;
+        } while(color.red() < 2);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
         Push_Beacon.start();
@@ -765,6 +793,23 @@ public class Autonomous extends DefineEverything {
             doDaSleep(10);
         }
         doDaSleep(200);
+
+        encoderDrives(0.1, 150, BACKWARD);
+        if(gyro.getIntegratedZValue() < -48)
+        {
+            if(gyro.getIntegratedZValue() < -54)
+            {
+                gyroTurns(0.15, -52);
+            }
+            gyroTurns(0.15, -47);
+        }
+        else if(gyro.getIntegratedZValue() > -42)
+        {
+            gyroTurns(0.1, -42);
+        }
+        leftWheelSpeed = 0.0; //Sam was here. You were terrible. I hope you won connor!
+        rightWheelSpeed = 0.0;
+        doDaSleep(350);
         donePushing = false;
         Drive_CorrectRed.start();
         encoderDrives(0.1, 50, BACKWARD);
@@ -772,171 +817,66 @@ public class Autonomous extends DefineEverything {
         encoderDrives(0.4, 40, BACKWARD);
         encoderDrives(0.25, 50, BACKWARD);
         encoderDrives(0.1, 50, BACKWARD);
-        leftWheelSpeed = 0.08;
-        rightWheelSpeed = 0.08;
+        leftWheelSpeed = 0.1;
+        rightWheelSpeed = 0.1;
         doDaSleep(500);
         do
         {
-            leftWheelSpeed = 0.08;
-            rightWheelSpeed = 0.08;
-        } while(color.red() < 3);
+            leftWheelSpeed = 0.1;
+            rightWheelSpeed = 0.1;
+        } while(color.red() < 2);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
         doDaSleep(500);
         do
         {
-            leftWheelSpeed = -0.08;
-            rightWheelSpeed = -0.08;
-        } while(color.red() < 3);
-        doDaSleep(150);
+            leftWheelSpeed = -0.07;
+            rightWheelSpeed = -0.07;
+        } while(color.red() < 2);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
         Push_Beacon2.start();
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
         while(!donePushing)
         {
             doDaSleep(10);
         }
-        /*encoderDrives(0.1, 730, BACKWARD);
-        /*if(Math.abs(getRightWheelEncoderValue()) > 850)
-        {
-            encoderDrives(0.05, (Math.abs(getRightWheelEncoderValue()) - 850), FORWARD);
-        }
-        else
-        {
-            encoderDrives(0.05, (850 - Math.abs(getRightWheelEncoderValue())), BACKWARD);
-        }*/
-        /*gyroTurnsDifferentWheels(-0.02, -0.1, -20);
+
+        doDaSleep(500);
+
+        leftSpeedMultiplier = 1.4;
+        gyroTurns(0.3, -31);
+        gyroTurns(0.15, -22);
+        leftSpeedMultiplier = 1.5;
+        encoderDrives(0.1, 80, FORWARD);
+        encoderDrives(0.25, 500, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
+        while(flywheelSpeed < 0.27)
+        {
+            targetFlywheelSpeed += 0.01;
+            flywheelSpeed += 0.01;
+            targetFlywheelSpeed = (double)Math.round(targetFlywheelSpeed * 100d) / 100d;
+            flywheelSpeed = (double)Math.round(flywheelSpeed * 100d) / 100d;
+            doDaSleep(60);
+        }
         doDaSleep(1000);
-        gyroTurns(0.07, -40);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-        if(gyro.getIntegratedZValue() < -45)
-        {
-            gyroTurns(0.05, -47);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        putBeaconPusherInPosition(2);
-        timerVar2 = System.currentTimeMillis();
-        do
-        {
-            leftWheelSpeed = -0.04;
-            rightWheelSpeed = -0.04;
-        } while(color.red() < 3);
-
-        if(System.currentTimeMillis() > timerVar2 + 400)
-        {
-            leftWheelSpeed = 0.06;
-            rightWheelSpeed = 0.06;
-            doDaSleep(1100);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        putBeaconPusherInPosition(3);
-        doDaSleep(1000);
-        beaconPusherSpeed = 0.99;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.5;
-        leftWheelMultiplier = 1.35;
-        leftWheelSpeed = -0.06;
-        rightWheelSpeed = -0.06;
-        doDaSleep(1100);
-        if(gyro.getIntegratedZValue() > -43)
-        {
-            gyroTurns(0.05, -41);
-        }
-        else if(gyro.getIntegratedZValue() < -47){
-            gyroTurns(0.05, -48);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(200);
-        leftWheelSpeed = -0.06;
-        rightWheelSpeed = -0.06;
-        doDaSleep(1100);
-        if(gyro.getIntegratedZValue() > -43)
-        {
-            gyroTurns(0.05, -41);
-        }
-        else if(gyro.getIntegratedZValue() < -47){
-            gyroTurns(0.05, -48);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(200);
-        timerVar2 = System.currentTimeMillis();
-        do
-        {
-            leftWheelSpeed = -0.06;
-            rightWheelSpeed = -0.06;
-        } while(color.red() < 3);
-
-        if(System.currentTimeMillis() > timerVar2 + 400) {
-            leftWheelSpeed = 0.06;
-            rightWheelSpeed = 0.06;
-            doDaSleep(1100);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        beaconPusherSpeed = 0.01;
-        doDaSleep(700);
-        beaconPusherSpeed = 0.5;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.99;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.5;
-
-        doDaSleep(1000);
-
-        encoderDrives(0.1, 200, FORWARD);
-
-        gyroTurns(0.08, -10);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-        gyroTurns(0.06, 30);
-
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-
-        encoderDrives(0.1, 225, FORWARD);
-
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        targetFlywheelSpeed = 0.22;
-        while(flywheelSpeed < 0.22)
-        {
-            doDaSleep(10);
-        }
         RPM.start();
-
-        doDaSleep(1000);
-
-        frontIntakesSpeed = 0.01;
         backIntakeSpeed = 0.1;
-
-        doDaSleep(8000);
-
-        frontIntakesSpeed = 0.5;
-        backIntakeSpeed = 0.5;
-
+        frontIntakesSpeed = 0.01;
+        doDaSleep(3000);
         keepRunning = false;
-        doDaSleep(1000);
-        targetFlywheelSpeed = 0.0;
-
-        while(flywheelSpeed > 0.1)
+        doDaSleep(100);
+        backIntakeSpeed = 0.5;
+        frontIntakesSpeed = 0.5;
+        Steven_Ramp_Down.start();
+        encoderDrives(0.15, 500, FORWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        while(flywheelSpeed > 0.0)
         {
             doDaSleep(10);
         }
-
-        encoderDrives(0.1, 550, FORWARD);*/
     }
 
 
@@ -947,10 +887,10 @@ public class Autonomous extends DefineEverything {
         }
         encoderDrives(0.1, 130, FORWARD);
         encoderDrives(0.25, 130, FORWARD);
-        encoderDrives(0.4, 105, FORWARD);
+        encoderDrives(0.4, 240, FORWARD);
         encoderDrives(0.25, 130, FORWARD);
         encoderDrives(0.1, 130, FORWARD);
-        gyroTurns(0.1, 21);
+        gyroTurns(0.1, 11);
         rightWheelSpeed = 0.0;
         leftWheelSpeed = 0.0;
         doDaSleep(500);
@@ -959,6 +899,21 @@ public class Autonomous extends DefineEverything {
         doDaSleep(100);
         rightWheelSpeed = 0.0;
         leftWheelSpeed = 0.0;
+        long daTimeVar = System.currentTimeMillis();
+        if(gyro.getIntegratedZValue() < 38)
+        {
+                while(gyro.getIntegratedZValue() < 41 && System.currentTimeMillis() < (daTimeVar + 2000))
+                {
+                    leftWheelSpeed = -0.1;
+                    rightWheelSpeed = 0.1;
+                }
+        }
+        else if(gyro.getIntegratedZValue() > 49)
+        {
+            gyroTurns(0.15, 48);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
         timerVar2 = System.currentTimeMillis();
         beaconPusherSpeed = 0.01;
         while((color.blue() < 3 && color.red() < 3) && (System.currentTimeMillis() > (timerVar2 + 800)))
@@ -975,43 +930,78 @@ public class Autonomous extends DefineEverything {
             leftWheelSpeed = -0.08;
             rightWheelSpeed = -0.08;
         } while(color.blue() < 3);
-        int rightVal = getRightWheelEncoderValue();
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
-        doDaSleep(200);
-        Push_Beacon.start();
-        encoderDrives(0.1, Math.abs(rightVal - getRightWheelEncoderValue()), BACKWARD);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        while(!donePushing)
-        {
-            doDaSleep(10);
-        }
-        doDaSleep(200);
-        donePushing = false;
-        Drive_Correct.start();
-        encoderDrives(0.1, 50, FORWARD);
-        encoderDrives(0.25, 50, FORWARD);
-        encoderDrives(0.4, 40, FORWARD);
-        encoderDrives(0.25, 50, FORWARD);
-        encoderDrives(0.1, 50, FORWARD);
-        leftWheelSpeed = -0.08;
-        rightWheelSpeed = -0.08;
-        doDaSleep(500);
-        do
-        {
-            leftWheelSpeed = -0.08;
-            rightWheelSpeed = -0.08;
-        } while(color.blue() < 3);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(500);
+        doDaSleep(400);
         do
         {
             leftWheelSpeed = 0.08;
             rightWheelSpeed = 0.08;
         } while(color.blue() < 3);
-        doDaSleep(150);
+        Push_Beacon.start();
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        while(!donePushing) {
+            doDaSleep(10);
+        }
+        doDaSleep(200);
+        donePushing = false;
+        encoderDrives(0.1, 150, FORWARD);
+        if(gyro.getIntegratedZValue() > 49)
+        {
+            if(gyro.getIntegratedZValue() > 52)
+            {
+                gyroTurns(0.12, 51);
+            }
+            else if(gyro.getIntegratedZValue() > 51)
+            {
+                gyroTurns(0.12, 51);
+            }
+            else
+            {
+                gyroTurns(0.12, 49);
+            }
+        }
+        else if(gyro.getIntegratedZValue() < 46)
+        {
+            gyroTurns(0.12, 46);
+        }
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        doDaSleep(300);
+        Drive_Correct.start();
+        encoderDrives(0.1, 20, FORWARD);
+        encoderDrives(0.3, 30, FORWARD);
+        encoderDrives(0.5, 30, FORWARD);
+        encoderDrives(0.6, 40, FORWARD);
+        encoderDrives(0.3, 20, FORWARD);
+        encoderDrives(0.1, 30, FORWARD);
+        donePushing = true;
+        leftWheelSpeed = -0.1;
+        rightWheelSpeed = -0.1;
+        doDaSleep(500);
+        long timerStop = System.currentTimeMillis();
+        do
+        {
+            leftWheelSpeed = -0.1;
+            rightWheelSpeed = -0.1;
+        } while(color.blue() < 3 && System.currentTimeMillis() < (timerStop + 4000));
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        if(System.currentTimeMillis() > (timerStop + 4000))
+        {
+            doDaSleep(20000);
+        }
+        else
+        {
+            doDaSleep(500);
+        }
+        do
+        {
+            leftWheelSpeed = 0.1;
+            rightWheelSpeed = 0.1;
+        } while(color.blue() < 3);
+        donePushing = false;
         Push_Beacon2.start();
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
@@ -1020,158 +1010,149 @@ public class Autonomous extends DefineEverything {
             doDaSleep(10);
         }
 
-        /*encoderDrives(0.1, 730, FORWARD);
-        gyroTurnsDifferentWheels(0.02, 0.1, 20);
-        gyroTurns(0.07, 40);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-        if(gyro.getIntegratedZValue() > 45)
-        {
-            gyroTurns(0.05, 47);
-        }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        putBeaconPusherInPosition(2);
-        do
-        {
-            leftWheelSpeed = 0.04;
-            rightWheelSpeed = 0.04;
-        } while(color.blue() < 4);
+        doDaSleep(500);
 
-        leftWheelSpeed = -0.06;
-        rightWheelSpeed = -0.06;
-        doDaSleep(1000);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        putBeaconPusherInPosition(3);
-        doDaSleep(1000);
-        beaconPusherSpeed = 0.99;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.5;
-        leftWheelSpeed = 0.06;
-        rightWheelSpeed = 0.06;
-        doDaSleep(1500);
-        if(gyro.getIntegratedZValue() < 47)
-        {
-            gyroTurns(0.05, 44);
-        }
-        else {
-            gyroTurns(0.05, 48);
-        }
+        leftSpeedMultiplier = 1.4;
+        gyroTurns(0.2, 60);
+        gyroTurns(0.3, 125);
+        gyroTurns(0.2, 170);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
         doDaSleep(200);
-        timerVar2 = System.currentTimeMillis();
-        do
+        if(gyro.getIntegratedZValue() > 191)
         {
-            leftWheelSpeed = 0.06;
-            rightWheelSpeed = 0.06;
-        } while(color.blue() < 4);
-
-        if(System.currentTimeMillis() > timerVar2 + 400) {
-            leftWheelSpeed = -0.06;
-            rightWheelSpeed = -0.06;
-            doDaSleep(1000);
+            gyroTurns(0.15, 191);
         }
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        beaconPusherSpeed = 0.01;
-        doDaSleep(700);
-        beaconPusherSpeed = 0.5;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.99;
-        doDaSleep(200);
-        beaconPusherSpeed = 0.5;
-
-        doDaSleep(1000);
-
-        encoderDrives(0.1, 200, BACKWARD);
-
-        gyroTurns(0.08, 105);
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-        gyroTurns(0.06, 150);
-
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-        doDaSleep(1000);
-
-        encoderDrives(0.1, 300, FORWARD);
-
-        leftWheelSpeed = 0.0;
-        rightWheelSpeed = 0.0;
-
-        targetFlywheelSpeed = 0.22;
-        while(flywheelSpeed < 0.22)
+        else if(gyro.getIntegratedZValue() < 185)
         {
-            doDaSleep(10);
+            gyroTurns(0.15, 185);
         }
+        leftSpeedMultiplier = 1.0;
+        donePushing = false;
+        Drive_Correct2.start();
+        encoderDrives(0.1, 80, FORWARD);
+        encoderDrives(0.25, 300, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+        donePushing = true;
+        while(flywheelSpeed < 0.27)
+        {
+            targetFlywheelSpeed += 0.01;
+            flywheelSpeed += 0.01;
+            targetFlywheelSpeed = (double)Math.round(targetFlywheelSpeed * 100d) / 100d;
+            flywheelSpeed = (double)Math.round(flywheelSpeed * 100d) / 100d;
+            doDaSleep(60);
+        }
+        doDaSleep(1000);
         RPM.start();
-
-        doDaSleep(1000);
-
-        frontIntakesSpeed = 0.01;
         backIntakeSpeed = 0.1;
-
-        doDaSleep(8000);
-
-        frontIntakesSpeed = 0.5;
-        backIntakeSpeed = 0.5;
-
+        frontIntakesSpeed = 0.01;
+        doDaSleep(3000);
         keepRunning = false;
-        doDaSleep(1000);
-
-        targetFlywheelSpeed = 0.0;
+        doDaSleep(100);
+        backIntakeSpeed = 0.5;
+        frontIntakesSpeed = 0.5;
+        Steven_Ramp_Down.start();
+        encoderDrives(0.15, 500, FORWARD);
         while(flywheelSpeed > 0.0)
         {
             doDaSleep(10);
         }
-
-        encoderDrives(0.1, 550, FORWARD);*/
     }
+
+    long timeOfAuto = 0;
 
     void forwardLaunchAuton()
     {
-        encoderDrives(0.1, 550, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
+        encoderDrives(0.25, 350, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
-
-        targetFlywheelSpeed = 0.18;
-        while(flywheelSpeed < 0.17)
+        while(flywheelSpeed < 0.27)
         {
-            doDaSleep(10);
+            targetFlywheelSpeed += 0.01;
+            flywheelSpeed += 0.01;
+            targetFlywheelSpeed = (double)Math.round(targetFlywheelSpeed * 100d) / 100d;
+            flywheelSpeed = (double)Math.round(flywheelSpeed * 100d) / 100d;
+            doDaSleep(60);
         }
-
         doDaSleep(1000);
-
         RPM.start();
-
-        frontIntakesSpeed = 0.01;
         backIntakeSpeed = 0.1;
-
-        doDaSleep(8000);
-
-        encoderDrives(0.1, 550, FORWARD);
+        frontIntakesSpeed = 0.01;
+        doDaSleep(2000);
+        keepRunning = false;
+        doDaSleep(100);
+        backIntakeSpeed = 0.5;
+        frontIntakesSpeed = 0.5;
+        Steven_Ramp_Down.start();
+        //encoderDrives(0.15, 500, FORWARD);
         leftWheelSpeed = 0.0;
         rightWheelSpeed = 0.0;
-
-        keepRunning = false;
-        doDaSleep(1000);
-
-        frontIntakesSpeed = 0.5;
-        backIntakeSpeed = 0.5;
-
-        targetFlywheelSpeed = 0.0;
-        while(flywheelSpeed > 0.0)
+        if(daBlueAuto == false)
         {
-            doDaSleep(10);
+            while (flywheelSpeed > 0.0) {
+                doDaSleep(10);
+            }
+        }
+        else {
+            while (flywheelSpeed > 0.09) {
+                doDaSleep(10);
+            }
+            blockAfterLaunch();
         }
     }
 
+    void blockAfterLaunch()
+    {
+        encoderDrives(0.1, 80, FORWARD);
+        encoderDrives(0.6, 150, FORWARD);
+        encoderDrives(0.9, 1000, FORWARD);
+        encoderDrives(0.6, 150, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
+        while(System.currentTimeMillis() < (timeOfAuto + 9000))
+        {
+            doDaSleep(10);
+        }
+        if(daBlueAuto) {
+            gyroTurns(0.15, 15);
+            leftWheelSpeed = 0.0;
+            rightWheelSpeed = 0.0;
+            doDaSleep(400);
+        }
+        else
+        {
+            gyroTurns(0.15, -45);
+            leftWheelSpeed = 0.0;
+            rightWheelSpeed = 0.0;
+            doDaSleep(400);
+            if (gyro.getIntegratedZValue() > -43) {
+                gyroTurns(0.15, -43);
+            }
+        }
+        encoderDrives(0.1, 80, FORWARD);
+        encoderDrives(0.25, 600, FORWARD);
+        encoderDrives(0.1, 80, FORWARD);
+        leftWheelSpeed = 0.0;
+        rightWheelSpeed = 0.0;
+    }
+
+    Runnable stevenRampDown = new Runnable() {
+        public void run() {
+            while(flywheelSpeed > 0.0)
+            {
+                targetFlywheelSpeed -= 0.01;
+                flywheelSpeed -= 0.01;
+                targetFlywheelSpeed = (double)Math.round(targetFlywheelSpeed * 100d) / 100d;
+                flywheelSpeed = (double)Math.round(flywheelSpeed * 100d) / 100d;
+                doDaSleep(60);
+            }
+        }
+    };
+
+    Thread Steven_Ramp_Down = new Thread(stevenRampDown);
 
     Runnable pushBeacon = new Runnable()
     {
@@ -1189,6 +1170,7 @@ public class Autonomous extends DefineEverything {
         }
     };
 
+
     Runnable pushBeacon2 = new Runnable()
     {
         public void run()
@@ -1200,7 +1182,7 @@ public class Autonomous extends DefineEverything {
             beaconPusherSpeed = 0.5;
             doDaSleep(500);
             beaconPusherSpeed = 0.99;
-            doDaSleep(200);
+            doDaSleep(600);
             beaconPusherSpeed = 0.5;
             donePushing = true;
         }
@@ -1215,20 +1197,47 @@ public class Autonomous extends DefineEverything {
         {
             while(donePushing == false)
             {
-                if (gyro.getIntegratedZValue() < 44)
+                if (gyro.getIntegratedZValue() < 45)
                 {
-                        leftSpeedMultiplier = 1.2;
+                        leftSpeedMultiplier = 0.65;
                 }
-                else if (gyro.getIntegratedZValue() > 46)
+                else if (gyro.getIntegratedZValue() > 50)
                 {
-                        leftSpeedMultiplier = 2.1;
+                        leftSpeedMultiplier = 4;
+                }
+                else if(gyro.getIntegratedZValue() > 48)
+                {
+                    leftSpeedMultiplier = 1.45;
                 }
                 else
                 {
-                    leftSpeedMultiplier = 1.7;
+                    leftSpeedMultiplier = 1.25;
                 }
             }
-            leftSpeedMultiplier = 1.7;
+            leftSpeedMultiplier = 1.25;
+        }
+    };
+
+    Runnable correctDriveVortex = new Runnable()
+    {
+        public void run()
+        {
+            while(donePushing == false)
+            {
+                if (gyro.getIntegratedZValue() < 188)
+                {
+                    leftSpeedMultiplier = 0.65;
+                }
+                else if (gyro.getIntegratedZValue() > 190)
+                {
+                    leftSpeedMultiplier = 4;
+                }
+                else
+                {
+                    leftSpeedMultiplier = 1.4;
+                }
+            }
+            leftSpeedMultiplier = 1.4;
         }
     };
 
@@ -1238,24 +1247,25 @@ public class Autonomous extends DefineEverything {
         {
             while(donePushing == false)
             {
-                if (gyro.getIntegratedZValue() < -46)
+                if (gyro.getIntegratedZValue() < -48)
                 {
                     leftSpeedMultiplier = 2.6;
                 }
-                else if (gyro.getIntegratedZValue() > -44)
+                else if (gyro.getIntegratedZValue() > -42)
                 {
-                    leftSpeedMultiplier = 0.7;
+                    leftSpeedMultiplier = 0.8;
                 }
                 else
                 {
-                    leftSpeedMultiplier = 1.7;
+                    leftSpeedMultiplier = 1.5;
                 }
             }
-            leftSpeedMultiplier = 1.7;
+            leftSpeedMultiplier = 1.5;
         }
     };
 
     Thread Drive_Correct = new Thread(correctDrive);
+    Thread Drive_Correct2 = new Thread(correctDriveVortex);
     Thread Drive_CorrectRed = new Thread(correctDriveRed);
     Thread Drive_CorrectRed1 = new Thread(correctDriveRed);
 
@@ -1273,15 +1283,33 @@ public class Autonomous extends DefineEverything {
                           currentMovementsToShoot, currentEndOnCornerVortex, currentSlowAutonomous);*/
 
             //driveTiles(1.0, FORWARD);
-            doDaSleep(currentDelay);
+            doDaSleep(daAutoDelay);
             leftWheelMultiplier = 1.25;
-            if (currentAlliance == RED)
+            timeOfAuto = System.currentTimeMillis();
+            while(gyro.getIntegratedZValue() != 0)
             {
-                    blueAuton();
+                gyro.calibrate();
+
+                while (gyro.isCalibrating()) {
+                    doDaSleep(GYRO_CALIBRATION_WAIT_TIME);
+                }
+
+                doDaSleep(100);
+            }
+            if(launchForwardAuto)
+            {
+                forwardLaunchAuton();
             }
             else
             {
+                if (daBlueAuto)
+                {
+                    blueAuton();
+                }
+                else
+                {
                     redAuton();
+                }
             }
 
 
@@ -1290,7 +1318,7 @@ public class Autonomous extends DefineEverything {
             // At the end of the autonomous routine stop motors
             rightWheelSpeed = STOP_MOTOR_SPEED;
             leftWheelSpeed = STOP_MOTOR_SPEED;
-            flywheelSpeed = STOP_MOTOR_SPEED;
+            flywheelSpeed = 0.0;
             frontIntakesSpeed = 0.5;
             backIntakeSpeed = 0.5;
             beaconPusherSpeed = 0.5;
@@ -1313,9 +1341,9 @@ public class Autonomous extends DefineEverything {
         BLW = hardwareMap.dcMotor.get("BLW");
         BRW = hardwareMap.dcMotor.get("BRW");
 
-        URFW = hardwareMap.dcMotor.get("URFW"); // Flywheel
+        ULFW = hardwareMap.dcMotor.get("URFW"); // Flywheel
         LRFW = hardwareMap.dcMotor.get("IRD");
-        ULFW = hardwareMap.dcMotor.get("ULFW");
+        URFW = hardwareMap.dcMotor.get("ULFW");
         LLFW = hardwareMap.dcMotor.get("ILD");
 
         //FI = hardwareMap.servo.get("FI");
@@ -1354,7 +1382,56 @@ public class Autonomous extends DefineEverything {
     @Override
     public void init_loop() {
         // Bumpers change the header and set the pre-set autonomous routines
-        if(gamepad1.left_bumper && headerStringArrayLocation > 0)
+
+
+        if(gamepad1.b)
+        {
+            daBlueAuto = false;
+        }
+        else if(gamepad1.x)
+        {
+            daBlueAuto = true;
+        }
+
+        if(gamepad1.dpad_up)
+        {
+            launchForwardAuto = true;
+        }
+        else if(gamepad1.dpad_down)
+        {
+            launchForwardAuto = false;
+        }
+
+        if(gamepad1.y && !pressedDaChange)
+        {
+            daAutoDelay += 1000;
+            pressedDaChange = true;
+        }
+        else if(gamepad1.a && !pressedDaChange)
+        {
+            daAutoDelay -= 1000;
+            pressedDaChange = true;
+        }
+        else if(gamepad1.y || gamepad1.a)
+        {
+            pressedDaChange = true;
+        }
+        else
+        {
+            pressedDaChange = false;
+        }
+
+
+
+        telemetry.addData("Delay", (daAutoDelay / 1000));
+        telemetry.addData("Blue Auto? ", daBlueAuto);
+        telemetry.addData("Just Launch? ", launchForwardAuto);
+
+
+
+
+
+        /*if(gamepad1.left_bumper && headerStringArrayLocation > 0)
         {
             headerStringArrayLocation--;
             while(gamepad1.left_bumper)
@@ -1936,7 +2013,7 @@ public class Autonomous extends DefineEverything {
         telemetry.addData("Delay Before Shooting ", allParametersStringArray[8]);
         telemetry.addData("Movements To Shoot ", allParametersStringArray[9]);
         telemetry.addData("End on Corner Vortex", allParametersStringArray[10]);
-        telemetry.addData("Slow Autonomous", allParametersStringArray[11]);
+        telemetry.addData("Slow Autonomous", allParametersStringArray[11]);*/
     }
 
 
@@ -1955,11 +2032,13 @@ public class Autonomous extends DefineEverything {
         }
 
         // Ramp the flywheel up and down
-        if(targetFlywheelSpeed != flywheelSpeed && (timerVar == 0 || System.currentTimeMillis() > (timerVar + 30)))
+        if(targetFlywheelSpeed != flywheelSpeed && (System.currentTimeMillis() > (timerVar + 30)))
         {
             flywheelSpeed += (((targetFlywheelSpeed - flywheelSpeed) / (Math.abs(targetFlywheelSpeed - flywheelSpeed))) * 0.01);
             timerVar = System.currentTimeMillis();
-        } else
+            flywheelSpeed = (double)Math.round(flywheelSpeed * 100d) / 100d;
+        }
+        else if(targetFlywheelSpeed == flywheelSpeed)
         {
             timerVar = 0;
         }
@@ -1967,7 +2046,7 @@ public class Autonomous extends DefineEverything {
         // Run the motors at the speeds defined by the autonomous thread
         runLeftWheels((leftWheelSpeed * leftSpeedMultiplier));
         runRightWheels(rightWheelSpeed);
-        runFlywheel(flywheelSpeed);
+        runFlywheel(-flywheelSpeed);
         runFrontIntakes(frontIntakesSpeed);
         BI.setPosition(backIntakeSpeed);
         BP.setPosition(beaconPusherSpeed);
@@ -1976,11 +2055,12 @@ public class Autonomous extends DefineEverything {
         telemetry.addData("Left Speed", leftWheelSpeed);
         telemetry.addData("Gyro ", gyro.getIntegratedZValue());
         telemetry.addData("Right Encoder", getRightWheelEncoderValue());
-        telemetry.addData("Left Encoder", getLeftWheelEncoderValue());
-        telemetry.addData("Blue", color.blue());
-        telemetry.addData("Target Flywheel", targetFlywheelSpeed);
+        telemetry.addData("Left Encoder Pure Value", leftEncoderMotor().getCurrentPosition());
+        telemetry.addData("Red", color.red());
+        telemetry.addData("Flywheel Encoder", flywheelEncoderSpeed);
+        telemetry.addData("Flywheel Speed", flywheelSpeed);
 
-        doDaSleep(7);
+        doDaSleep(4);
     }
 
 }

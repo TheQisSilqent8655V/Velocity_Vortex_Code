@@ -5,6 +5,9 @@ import com.qualcomm.robotcore.eventloop.opmode.*;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.hardware.adafruit.AdafruitBNO055IMU;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
@@ -43,6 +46,7 @@ public class ExampleTeleOp extends OpMode {
     long checkItCorrectly = 0;
     boolean rampDown = false;
     double speedAtWhichLaunching = currentLaunchingSpeed;
+    int rampTimeSpeedThing = 60;
 
     double error = 0.0;
     double Kp = 0.0005;
@@ -62,6 +66,7 @@ public class ExampleTeleOp extends OpMode {
     Servo FFI;
     Servo BFI;
     Servo BP;
+
 
     Runnable FlywheelSpeedCheck = new Runnable() {
         public void run() {
@@ -175,7 +180,7 @@ public class ExampleTeleOp extends OpMode {
             RPM.start();
             val++;
             currentLaunchingSpeed = 0.3;
-            rampUpSpeed = currentLaunchingSpeed + 0.3;
+            rampUpSpeed = currentLaunchingSpeed + 0.25;
             rampUpSpeed = Range.clip(rampUpSpeed, 0.0, 1.0);
         }
         if(gamepad1.right_bumper)
@@ -190,7 +195,7 @@ public class ExampleTeleOp extends OpMode {
         }
         runRightWheels(rightSpeed);
         runLeftWheels((leftSpeed * 1.0));
-        if(targetFlywheelSpeed != flywheelSpeed && (System.currentTimeMillis() > (timerVar + 60)))
+        if(targetFlywheelSpeed != flywheelSpeed && (System.currentTimeMillis() > (timerVar + rampTimeSpeedThing)))
         {
             flywheelSpeed += (((targetFlywheelSpeed - flywheelSpeed) / (Math.abs(targetFlywheelSpeed - flywheelSpeed))) * 0.01);
             timerVar = System.currentTimeMillis();
@@ -262,22 +267,27 @@ public class ExampleTeleOp extends OpMode {
         if(gamepad2.a)
         {
             targetFlywheelSpeed = 0.0;
-            rampDown = true;
+            rampTimeSpeedThing = 60;
         }
-        else if(gamepad2.b && (changeSpeed == false))
+        else if(gamepad2.b)
         {
-            currentLaunchingSpeed += 0.01;
+            rampTimeSpeedThing = 40;
+            currentLaunchingSpeed = 0.27;
+            rampUpSpeed = (0.27 + 0.25);
             targetFlywheelSpeed = currentLaunchingSpeed;
-            changeSpeed = true;
-        }
-        else if(gamepad2.x && (changeSpeed == false))
-        {
-            currentLaunchingSpeed -= 0.01;
-            targetFlywheelSpeed = currentLaunchingSpeed;
-            changeSpeed = true;
         }
         else if(gamepad2.y)
         {
+            rampTimeSpeedThing = 40;
+            currentLaunchingSpeed = 0.3;
+            rampUpSpeed = (0.3 + 0.25);
+            targetFlywheelSpeed = currentLaunchingSpeed;
+        }
+        else if(gamepad2.x)
+        {
+            rampTimeSpeedThing = 40;
+            currentLaunchingSpeed = 0.3;
+            rampUpSpeed = (0.3 + 0.3);
             targetFlywheelSpeed = currentLaunchingSpeed;
         }
         else
@@ -330,15 +340,14 @@ public class ExampleTeleOp extends OpMode {
             }
         }*/
 
-        telemetry.addData("Right Speed ", rightSpeed);
+        /*telemetry.addData("Right Speed ", rightSpeed);
         telemetry.addData("Left Speed ", leftSpeed);
         telemetry.addData("Flywheel Speed", flywheelSpeed);
         telemetry.addData("Back Intake", backIntakeSpeed);
         telemetry.addData("Encoder Threshold", encoderThreshold);
-        telemetry.addData("Flywheel Encoder Speed", flywheelEncoderSpeed);
-        telemetry.addData("Voltage ", this.hardwareMap.voltageSensor.iterator().next().getVoltage());
-        telemetry.addData("Ramp Up Speed", rampUpSpeed);
-        telemetry.addData("Current Launching Speed", currentLaunchingSpeed);
+        telemetry.addData("Flywheel Encoder Speed", flywheelEncoderSpeed);*/
+        //telemetry.addData("Ramp Up Speed", rampUpSpeed);
+        //telemetry.addData("Current Launching Speed", currentLaunchingSpeed);
     }
 
     /*

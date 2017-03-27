@@ -80,6 +80,7 @@ public class DefineEverything extends OpMode {
      */
     @Override
     public void init() {
+
         // Map Motors
         FLW = hardwareMap.dcMotor.get("FLW"); // Drive
         FRW = hardwareMap.dcMotor.get("FRW");
