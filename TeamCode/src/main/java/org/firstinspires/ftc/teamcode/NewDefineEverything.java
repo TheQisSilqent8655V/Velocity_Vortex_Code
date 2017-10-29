@@ -54,6 +54,10 @@ public class NewDefineEverything extends OpMode {
     I2cDeviceSynch FlywheelEncoder;
     VEXEncoder Flywheel;
 
+    //New Enoder
+    I2cDeviceSynch WheelEncoder;
+    VEXEncoder Wheel;
+
     // Variables for both autonomous and teleOp to use
     double rightWheelSpeed = 0.0;
     double leftWheelSpeed = 0.0;
@@ -67,6 +71,82 @@ public class NewDefineEverything extends OpMode {
     int targetFlywheelEncoderSpeed = 0;
     int val = 0;
     final int FLYWHEEL_RAMP_TIME = 60;
+    long rampDownTimer = 0;
+    double bangBangValue = 0.86;
+    double bangBangValue2 = 0.52;
+    boolean runVelocityControl = true;
+
+    /*
+     * Controls the speed of the flywheel based on encoder values. Also
+     * controls the ramp down to make it fast and not kill the motors.
+     * Uses just Bang Bang right now, might want to add PID for base
+     * speed, but looking good right now.
+     */
+    Runnable BangBang = new Runnable() {
+        public void run()
+        {
+            while (runVelocityControl)
+            {
+                // Measure flywheel speed with encoders
+                flywheelEncoderSpeed = Flywheel.getUnsignedVelocity();
+                error = Math.abs(flywheelEncoderSpeed - targetFlywheelEncoderSpeed);
+
+                // Bang Bang if not ramping down, otherwise stop the flywheel as soon as you start intaking
+                if(rampingDown)
+                {
+                    if(targetFlywheelSpeed == 0.0 && flywheelEncoderSpeed < 2000) // Starting to ramp down
+                    {
+                        if(gamepad1.left_bumper && (System.currentTimeMillis() > (rampDownTimer + 2000))) // If slow enough reverse flywheel to stop quicker
+                        {
+                            targetFlywheelSpeed = -0.1;
+                            currentFlywheelSpeed = -0.1;
+                        }
+                    }
+                    else if ((targetFlywheelSpeed == -0.1 || targetFlywheelSpeed == 0.0) && flywheelEncoderSpeed > 2000) // Put speed at 0 if stopped
+                    {
+                        targetFlywheelSpeed = 0.0;
+                        currentFlywheelSpeed = 0.0;
+                        rampingDown = false;
+                    }
+                }
+                else if(currentFlywheelSpeed > 0.30)  // If the flywheel is up to speed
+                {
+                    // If the flywheel is going slower than launching speed
+                    if((error > 2 && flywheelEncoderSpeed > targetFlywheelEncoderSpeed))
+                    {
+                        // Bump up flywheel to different Bang Bang speeds depending on target speed
+                        if(targetFlywheelSpeed == 190)
+                        {
+                            targetFlywheelSpeed = 0.73;
+                            currentFlywheelSpeed = 0.73;
+                        }
+                        else
+                        {
+                            targetFlywheelSpeed = bangBangValue;
+                            currentFlywheelSpeed = bangBangValue;
+                        }
+                    }
+                    else
+                    {
+                        // If running okay run at normal speed
+                        if(targetFlywheelSpeed == 190)
+                        {
+                            targetFlywheelSpeed = 0.38;
+                            currentFlywheelSpeed = 0.38;
+                        }
+                        else
+                        {
+                            targetFlywheelSpeed = bangBangValue2;
+                            currentFlywheelSpeed = bangBangValue2;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Create Thread
+    Thread VelocityControl = new Thread(BangBang);
 
     /*
      * Code to run when the op mode is first enabled goes here
@@ -105,18 +185,18 @@ public class NewDefineEverything extends OpMode {
         Lift.setDirection(DcMotor.Direction.REVERSE);
 
         // Map Sensors
-        //FlywheelEncoder = hardwareMap.i2cDeviceSynch.get("F");
-        //Flywheel = new VEXEncoder(0x10, FlywheelEncoder);
+        FlywheelEncoder = hardwareMap.i2cDeviceSynch.get("F");
+        Flywheel = new VEXEncoder(0x18, FlywheelEncoder);
         Color = hardwareMap.colorSensor.get("color");
         stevens_IMU = new AdafruitBNO055IMU(hardwareMap.i2cDeviceSynch.get("IMU")); // Adafruit Gyro
         parameters = new BNO055IMU.Parameters();
 
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
         boolean success = stevens_IMU.initialize(parameters);
+        Color.enableLed(false);
+
 
         //telemetry.addData("Success: ", success);
-
-
     }
 
     /*
