@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.util.Range;
 /**
  * Created by Conno on 3/10/2017.
  */
-@TeleOp(name = "Test Vex TeleOp", group = "TeleOp")
+//@TeleOp(name = "Test Vex TeleOp", group = "TeleOp")
 public class NewCompetitionTeleOp extends NewDefineEverything {
 
     final double NORMAL_DRIVE_MULTIPLIER = 0.5;
