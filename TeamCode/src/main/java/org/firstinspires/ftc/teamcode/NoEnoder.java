@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.adafruit.AdafruitBNO055IMU;
+import com.qualcomm.hardware.adafruit.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -10,79 +12,21 @@ import com.qualcomm.robotcore.hardware.Servo;
 @TeleOp(name = "No Encoder", group = "TeleOp")
 public class NoEnoder extends NewDefineEverything {
 
-    final double NORMAL_DRIVE_MULTIPLIER = 0.5;
+    // Class Variables
+    final double NORMAL_DRIVE_MULTIPLIER = 0.5; // Constants to make code readable
     final double SLOW_DRIVE_MULTIPLIER = 0.25;
-    double targetRightWheelSpeed = 0.0;
+
+    double targetRightWheelSpeed = 0.0; // Drive ramp variables, not needed right now, but might come back to them
     double targetLeftWheelSpeed = 0.0;
     long dRTimerVar = 0;
     long dLTimerVar = 0;
+    boolean changeBang = false;
+    boolean changeBang2 = false;
 
     //TOM STUFF
     int POS = 0;
     int SSP = 0;
     int USP = 0;
-
-    /*
-     * Controls the speed of the flywheel based on encoder values. Also
-     * controls the ramp down to make it fast and not kill the motors.
-     * Uses just Bang Bang right now, might want to add PID for base
-     * speed, but looking good right now.
-     */
-    Runnable BangBang = new Runnable() {
-        public void run()
-        {
-            while (true)
-            {
-                //TOM STUFF
-                POS = Flywheel.getPosition(0x14);
-                //SSP = Flywheel.getSignedVelocity(0x14);
-                USP = Flywheel.getUnsignedVelocity(0x14);
-
-                // Measure flywheel speed with encoders
-                flywheelEncoderSpeed = Flywheel.getUnsignedVelocity(0x14);
-                error = Math.abs(flywheelEncoderSpeed - targetFlywheelEncoderSpeed);
-
-                // Bang Bang if not ramping down, otherwise stop the flywheel as soon as you start intaking
-                if(rampingDown)
-                {
-                    if(targetFlywheelSpeed == 0.0 && flywheelEncoderSpeed < 2000)
-                    {
-                        if(gamepad1.left_bumper && flywheelEncoderSpeed > 300)
-                        {
-                            targetFlywheelSpeed = -0.1;
-                            currentFlywheelSpeed = -0.1;
-                        }
-                    }
-                    else if ((targetFlywheelSpeed == -0.1 || targetFlywheelSpeed == 0.0) && flywheelEncoderSpeed > 2000)
-                    {
-                        targetFlywheelSpeed = 0.0;
-                        currentFlywheelSpeed = 0.0;
-                        rampingDown = false;
-                    }
-                }
-                else if(currentFlywheelSpeed > 0.45)  // If the flywheel is up to speed
-                {
-                    // If the flywheel is going slower than launching speed
-                    if((error > 2 && flywheelEncoderSpeed > targetFlywheelEncoderSpeed))
-                    {
-                        // Bump up flywheel to different Bang Bang speeds depending on target speed
-                        targetFlywheelSpeed = 0.78;
-                        currentFlywheelSpeed = 0.78;
-                    }
-                    else
-                    {
-                        // If running okay run at normal speed
-                        targetFlywheelSpeed = 0.52;
-                        currentFlywheelSpeed = 0.52;
-                    }
-                }
-            }
-        }
-    };
-
-    // Create Thread
-    Thread VelocityControl = new Thread(BangBang);
-
 
     /*
      * Code to run when the op mode is first enabled goes here
@@ -122,9 +66,16 @@ public class NoEnoder extends NewDefineEverything {
 
         // Map Sensors
         FlywheelEncoder = hardwareMap.i2cDeviceSynch.get("F");
-        Flywheel = new VEXEncoder(0x14, FlywheelEncoder);
+        Flywheel = new VEXEncoder(0x16, FlywheelEncoder);
+
         Color = hardwareMap.colorSensor.get("color");
         Color.enableLed(false);
+
+        /*stevens_IMU = new AdafruitBNO055IMU(hardwareMap.i2cDeviceSynch.get("IMU")); // Adafruit Gyro
+        parameters = new BNO055IMU.Parameters();
+
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        boolean success = stevens_IMU.initialize(parameters);*/
 
     }
 
@@ -147,23 +98,65 @@ public class NoEnoder extends NewDefineEverything {
 
         controlIntake(gamepad1.left_bumper, (gamepad1.left_trigger > 0.5)); // Intake, Outtake
 
-        //runIntake(gamepad1.right_stick_y);
-
         controlBeaconPusher(gamepad1.dpad_left, gamepad1.dpad_right); // Outward, Inward
 
         controlLift(gamepad2.right_stick_y); // Lift power
 
+        if(gamepad2.back)
+        {
+            runVelocityControl = false;
+        }
+
+        if((gamepad1.y || gamepad2.dpad_up) && !changeBang)
+        {
+            bangBangValue2 += 0.01;
+            changeBang = true;
+        }
+        else if((gamepad1.a || gamepad2.dpad_down) && !changeBang)
+        {
+            bangBangValue2 -= 0.01;
+            changeBang = true;
+        }
+        else if(!gamepad1.y && !gamepad1.a && !gamepad2.dpad_up && !gamepad2.dpad_down)
+        {
+            changeBang = false;
+        }
+
+        if((gamepad1.x || gamepad2.dpad_left) && !changeBang2)
+        {
+            bangBangValue += 0.01;
+            changeBang2 = true;
+        }
+        else if((gamepad1.b || gamepad2.dpad_right) && !changeBang2)
+        {
+            bangBangValue -= 0.01;
+            changeBang2 = true;
+        }
+        else if(!gamepad1.x && !gamepad1.b && !gamepad2.dpad_left && !gamepad2.dpad_right)
+        {
+            changeBang2 = false;
+        }
+
+        // Debugging stuff
         telemetry.addData("Target Right ", targetRightWheelSpeed);
         telemetry.addData("Right ", rightWheelSpeed);
         telemetry.addData("Flywheel Encoder ", flywheelEncoderSpeed);
         telemetry.addData("Flywheel Speed ", flywheelEncoderSpeed);
-        telemetry.addData("Blue ", Color.blue());
+        telemetry.addData("Bang Bang Up ", bangBangValue);
+        telemetry.addData("Bang Bang ", bangBangValue2);
+       //telemetry.addData("Blue ", Color.blue());
+        //telemetry.addData("Gyro ", (stevens_IMU.getAngularOrientation().firstAngle * -1));
 
-        telemetry.addData("Position: ", POS);
-        telemetry.addData("Signed V: ", SSP);
-        telemetry.addData("Unsigned V: ", USP);
+        //telemetry.addData("Position: ", POS);
+        //telemetry.addData("Signed V: ", SSP);
+        //telemetry.addData("Unsigned V: ", USP);
 
 
+    }
+
+    @Override
+    public void stop() {
+        runVelocityControl = false;
     }
 
     /**
@@ -174,20 +167,26 @@ public class NoEnoder extends NewDefineEverything {
      * @param slowButton  if the slow button is pressed
      * @param turboButton if the turbo button is pressed
      */
-    void controlDrive(boolean turboButton, boolean slowButton) {
+    void controlDrive(boolean turboButton, boolean slowButton)
+    {
         // Adjust speeds based on buttons
-        if (turboButton) {
+        if (turboButton)
+        {
             targetRightWheelSpeed = gamepad1.right_stick_y;
             targetLeftWheelSpeed = gamepad1.left_stick_y;
-        } else if (slowButton) {
+        }
+        else if (slowButton)
+        {
             targetRightWheelSpeed = (gamepad1.right_stick_y * SLOW_DRIVE_MULTIPLIER);
             targetLeftWheelSpeed = (gamepad1.left_stick_y * SLOW_DRIVE_MULTIPLIER);
-        } else {
+        }
+        else
+        {
             targetRightWheelSpeed = (gamepad1.right_stick_y * NORMAL_DRIVE_MULTIPLIER);
             targetLeftWheelSpeed = (gamepad1.left_stick_y * NORMAL_DRIVE_MULTIPLIER);
         }
 
-        // Ramp the right side
+        // Ramp the right side. Not using, but might come back to
         if (targetRightWheelSpeed != rightWheelSpeed /*&& (System.currentTimeMillis() > (dRTimerVar + 2))*/) {
             // If you are increasing in speed forward or backward
             if (Math.abs(targetRightWheelSpeed) > Math.abs(rightWheelSpeed)) {
@@ -208,7 +207,7 @@ public class NoEnoder extends NewDefineEverything {
             //dRTimerVar = 0;
         }
 
-        // Ramp the left side
+        // Ramp the left side. Not using, but might come back to
         if (targetLeftWheelSpeed != leftWheelSpeed /*&& (System.currentTimeMillis() > (dLTimerVar + 2))*/) {
             // If you are increasing in speed forward or backward
             if (Math.abs(targetLeftWheelSpeed) > Math.abs(leftWheelSpeed)) {
@@ -240,29 +239,30 @@ public class NoEnoder extends NewDefineEverything {
      * controlDrive because the buttons are not constantly held
      * and it would look bad with that many parameters
      */
-    void controlFlywheel() {
+    void controlFlywheel()
+    {
         // Set target speeds based on the buttons
-        if (gamepad2.a) {
+        if (gamepad2.a)
+        {
             targetFlywheelSpeed = 0.0;
+            rampDownTimer = System.currentTimeMillis();
             rampingDown = true;
-        } else if (gamepad2.x) {
+        }
+        else if (gamepad2.x)
+        {
+            targetFlywheelSpeed = 1.0;
+            currentFlywheelSpeed = 1.0;
+            targetFlywheelEncoderSpeed = 205;
+        }
+        else if (gamepad2.y)
+        {
             targetFlywheelSpeed = 1.0;
             currentFlywheelSpeed = 1.0;
             targetFlywheelEncoderSpeed = 190;
-        } else if (gamepad2.y) {
-
-        } else if (gamepad2.b) {
-
         }
 
         // Ramp the flywheel up and down to be nice to motors
-        if (targetFlywheelSpeed != currentFlywheelSpeed && (System.currentTimeMillis() > (timerVar + FLYWHEEL_RAMP_TIME))) {
-            currentFlywheelSpeed += (((targetFlywheelSpeed - currentFlywheelSpeed) / (Math.abs(targetFlywheelSpeed - currentFlywheelSpeed))) * 0.01);
-            timerVar = System.currentTimeMillis();
-            currentFlywheelSpeed = (double) Math.round(currentFlywheelSpeed * 100d) / 100d;
-        } else if (targetFlywheelSpeed == currentFlywheelSpeed) {
-            timerVar = 0;
-        }
+        rampFlywheel();
 
         // Power the flywheel
         runFlywheel(currentFlywheelSpeed);
@@ -275,12 +275,18 @@ public class NoEnoder extends NewDefineEverything {
      * @param intake  run the intake inward
      * @param outtake run the intake outward
      */
-    void controlIntake(boolean intake, boolean outtake) {
-        if (intake) {
+    void controlIntake(boolean intake, boolean outtake)
+    {
+        if (intake)
+        {
             runIntake(1.0);
-        } else if (outtake) {
+        }
+        else if (outtake)
+        {
             runIntake(-1.0);
-        } else {
+        }
+        else
+        {
             runIntake(0.0);
         }
     }
@@ -293,12 +299,18 @@ public class NoEnoder extends NewDefineEverything {
      * @param outward pushes out
      * @param inward  runs inward
      */
-    void controlBeaconPusher(boolean outward, boolean inward) {
-        if (outward) {
+    void controlBeaconPusher(boolean outward, boolean inward)
+    {
+        if (outward)
+        {
             runBeaconPusher(1.0);
-        } else if (inward) {
+        }
+        else if (inward)
+        {
             runBeaconPusher(-1.0);
-        } else {
+        }
+        else
+        {
             runBeaconPusher(0.0);
         }
     }
@@ -308,7 +320,8 @@ public class NoEnoder extends NewDefineEverything {
      *
      * @param gamepadInput the value of the gamepad stick to base lift on
      */
-    void controlLift(double gamepadInput) {
+    void controlLift(double gamepadInput)
+    {
         runLift(gamepadInput);
     }
 }
