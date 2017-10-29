@@ -3,10 +3,10 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
 
+/**
+ * VEX Encoder I2c class developed by The Q is Silqent 2017
+ */
 public class VEXEncoder {
-    //When I wrote this, only God and I understood what I was doing.
-    //Now only God knows.
-
     //ADDRESSES
     private final int ADDRESS_REGISTER = 0x4D;
     private final int POSITION_REGISTER = 0x40;
@@ -14,28 +14,38 @@ public class VEXEncoder {
 
     //Variables
     I2cDeviceSynch device;
-    public int currentSetAddress = 0;
+    public int currentSetAddress;
 
     public VEXEncoder(int address, I2cDeviceSynch device){
         this.device = device;
+        currentSetAddress = 0;
 
         //Enable the device
         device.engage();
 
-        //Write and set new address
+        //Create new address based on the input parameter.
         device.write8(ADDRESS_REGISTER, address << 1);
+
+        //Set the software I2c address
+        device.setI2cAddress(new I2cAddr(address));
+
+        //Reset counters to zero
+        zero();
+    }
+
+    /**
+     * Method used to change the software I2c address of the given I2cDeviceSynch
+     * @param address The 7-bit address to change the software to.
+     */
+    public void setSoftwareAddress(int address){
         device.setI2cAddress(new I2cAddr(address));
     }
 
     /**
      * Gets the current position in ticks of the encoder.
-     * @param encoder The 7-bit address of the encoder to read from
      * @return An unsigned integer of the position of the encoder.
      */
-    public int getPosition(int encoder){
-        //Set software I2c address
-        device.setI2cAddress(new I2cAddr(encoder));
-
+    public int getPosition(){
         //Read position bytes
         int position;
         byte[] vals = device.read(POSITION_REGISTER, 4);
@@ -43,56 +53,30 @@ public class VEXEncoder {
         //Update current address variable for debugging
         currentSetAddress = device.getI2cAddress().get8Bit();
 
-        //Bitwise OR and AND on the given bytes (bytes also have to be shifted)
+        //Change bytes from signed to unsigned (bitwise AND) and OR them together into a single value
         position = ((vals[0] << 8) & 0x0000ff00) | (vals[1] & 0x000000ff) | ((vals[3] << 16) & 0x00ff0000) | ((vals[2] << 24) & 0xff000000);
         return position;
     }
 
     /**
-     * Gets the speed of the motors in ticks/50 ms
-     * returns -1 if the values wrap around
-     *
-     * DON'T USE, IS VERY TRASH, MADE BY CONNOR
-     *
-     * @param encoder the i2c address to read
-     * @return distance the motors moves in 50 milliseconds
-     */
-    public int getSpeed(int encoder)
-    {
-        int fillerInt = getPosition(encoder);
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException ex) {
-
-        }
-        int fillerInt2 = getPosition(encoder);
-        if(Math.abs(fillerInt - fillerInt2) < 500)
-        {
-            return Math.abs(fillerInt - fillerInt2);
-        }
-        return -1;
-    }
-
-    /**
      * Gets the unsigned velocity bytes from the velocity register.
-     * @param encoder The address (in 7-bit) of the encoder to get the data from
      * @return An integer (unsigned) of the current velocity of the encoder.
      */
-    public int getUnsignedVelocity(int encoder){
-        device.setI2cAddress(new I2cAddr(encoder));
-        int speed = 0;
+    public int getUnsignedVelocity(){
+        int speed;
+
+        //Read  2 byte values from velocity register
         byte[] vals = device.read(VELOCITY_REGISTER, 2);
 
+        //Change the bytes from signed to unsigned and bitwise OR them together.
         speed = ((vals[0] << 8) & 0x0000ff00) | (vals[1] & 0x000000ff);
         return speed;
     }
 
     /**
      * Resets the device counter to 0 through the 0x4A register, sending a single bit
-     * @param encoder The address (in 7-bit) of the encoder to reset.
      */
-    public void zero(int encoder){
-        device.setI2cAddress(new I2cAddr(encoder));
+    public void zero(){
         device.write8(0x4A, 1);
     }
 
